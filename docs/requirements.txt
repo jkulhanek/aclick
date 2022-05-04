@@ -1,0 +1,5 @@
+sphinx
+sphinxcontrib-log-cabinet
+Pallets-Sphinx-Themes
+sphinx-issues
+sphinx-tabs

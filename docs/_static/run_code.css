@@ -1,0 +1,16 @@
+@media only screen and (min-width: 920px) {
+.pair-code {
+  display: flex;
+  flex-direction: row;
+  gap: 2em;
+}
+
+.pair-code > div {
+  flex: 1 1 0px;
+  margin: -10px 0;
+}
+
+.pair-code .highlight {
+  height: calc(100% - 40px);
+}
+}
