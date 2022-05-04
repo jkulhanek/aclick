@@ -47,22 +47,138 @@ class D2:
     test2: int = 4
 
 
-@click_test(hierarchical=True)
-def test_dataclass_default(a: D2):
-    assert isinstance(a, D2)
-    assert a.test == "ok"
+def test_dataclass_default(monkeypatch):
+    @aclick.command(hierarchical=True)
+    def test_dataclass_default(a: D2):
+        assert isinstance(a, D2)
+        assert a.test == "ok"
+
+    ctx = click.Context(test_dataclass_default)
+    test_dataclass_default.parse_args(ctx, [])
+    params = test_dataclass_default.get_params(ctx)
+    assert params[1].default == 'ok'
+    assert params[2].default == 4
+
+    @click_test(hierarchical=True)
+    def test_dataclass_default(a: D2):
+        assert isinstance(a, D2)
+        assert a.test == "ok"
+
+    test_dataclass_default(monkeypatch)
 
 
-@click_test(hierarchical=True)
-def test_dataclass_optional(a: t.Optional[D2] = None):
-    assert a is None
+def test_dataclass_optional(monkeypatch):
+    @click_test(hierarchical=True)
+    def test_dataclass_optional(a: t.Optional[D2] = None):
+        assert a is None
+
+    test_dataclass_optional(monkeypatch)
+
+    class Schedule:
+        def __init__(self, type: str = 'constant', constant: float = 1e-4):
+            self.type = type
+            self.constant = constant
+
+    @dataclass
+    class Model:
+        '''
+        :param learning_rate: Learning rate
+        :param num_features: Number of features
+        '''
+        learning_rate: t.Optional[Schedule] = None
+        num_features: int = 5
+
+    @click_test('--model-learning-rate', hierarchical=True)
+    def train(model: Model, num_epochs: int = 5):
+        assert model is not None
+        assert isinstance(model.learning_rate, Schedule)
+
+    train(monkeypatch)
+
+    @click_test(hierarchical=True)
+    def train(model: Model, num_epochs: int = 5):
+        assert model is not None
+        assert model.learning_rate is None
+
+    train(monkeypatch)
+
+    @dataclass
+    class Model:
+        '''
+        :param learning_rate: Learning rate
+        :param num_features: Number of features
+        '''
+        learning_rate: t.Optional[Schedule]
+        num_features: int = 5
+
+    @click_test_error(hierarchical=True)
+    def train(err, model: Model, num_epochs: int = 5):
+        status, msg = err
+        assert status != 0
+        assert 'missing option' in msg.lower()
+
+    train(monkeypatch)
+
+    @click_test('--no-model-learning-rate', hierarchical=True)
+    def train(model: Model, num_epochs: int = 5):
+        assert model is not None
+        assert model.learning_rate is None
+
+    train(monkeypatch)
+
+    @click_test('--model-learning-rate', hierarchical=True)
+    def train(model: Model, num_epochs: int = 5):
+        assert model is not None
+        assert model.learning_rate is not None
+
+    train(monkeypatch)
+
+    @click_test_error('--model-learning-rate', '--help', hierarchical=True)
+    def train(err, model: Model, num_epochs: int = 5):
+        status, msg = err
+        assert status == 0
+        print(msg)
+        assert '--model-learning-rate-constant' in msg
+
+    train(monkeypatch)
 
 
-@click_test("--a", "d2", hierarchical=True)
-def test_union_of_dataclasses(a: t.Union[D1, D2]):
-    assert a is not None
-    assert isinstance(a, D2)
-    assert a.test == "ok"
+
+def test_union_of_dataclasses(monkeypatch):
+    @click_test("--a", "d2", hierarchical=True)
+    def test_union_of_dataclasses(a: t.Union[D1, D2]):
+        assert a is not None
+        assert isinstance(a, D2)
+        assert a.test == "ok"
+
+    test_union_of_dataclasses(monkeypatch)
+
+    @dataclass
+    class ModelA:
+        '''
+        :param learning_rate: Learning rate
+        :param num_features: Number of features
+        '''
+        learning_rate: float = 0.1
+        num_features: int = 5
+
+    @dataclass
+    class ModelB:
+        '''
+        :param learning_rate: Learning rate
+        :param num_layers: Number of layers
+        '''
+        learning_rate: float = 0.2
+        num_layers: int = 10
+
+
+    @click_test_error('--help', hierarchical=True)
+    def train(err, model: t.Union[ModelA, ModelB], num_epochs: int):
+        status, msg = err
+        print(msg)
+        assert status == 0
+
+    train(monkeypatch)
 
 
 @click_test_error("--a", "d5", hierarchical=True)

@@ -8,8 +8,8 @@ Install AClick from PyPI by running::
     pip install aclick
 
 
-Introduction
-------------
+From Click to AClick
+--------------------
 
 AClick is a wrapper library around click and provides the :func:`command` and
 :func:`group` decorators as well as :class:`Command` and :class:`Group` classes.
@@ -81,6 +81,7 @@ And the corresponding help page:
     invoke(hello, args=['--help'], prog_name='python hello.py')
 
 
+
 Command groups
 --------------
 
@@ -118,12 +119,12 @@ will automatically parse function's parameters.
             
         @cli.command()
         def initdb(user: str):
-            click.echo('Initialized the database')
+            click.echo(f'{user} initialized the database')
 
 
         @cli.command()
         def dropdb(database: str):
-            click.echo('Dropped the database')
+            click.echo(f'Dropped the database: {database}')
 
 The `cli` group is then used as the entrypoint::
 

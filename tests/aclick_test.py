@@ -18,6 +18,15 @@ def test_click_defaults(b: str = "test", a: int = 5, c: float = 3.4):
     assert c == 3.4
 
 
+@click_test_error('--help')
+def test_click_defaults_in_help(err, b: str = "test", a: int = 5, c: float = 3.4):
+    status, msg = err
+    assert status == 0
+    assert 'test' in msg
+    assert '5' in msg
+    assert '3.4' in msg
+
+
 @click_test()
 @_click.option("--some-option", "b", default="test ok")
 def test_click_ignore_defined_options(b: str = "test", a: int = 5, c: float = 3.4):

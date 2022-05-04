@@ -22,6 +22,10 @@ from .utils import (
 _SUPPORTED_TYPES = [str, float, int, bool]
 
 
+class _empty:
+    """Marker object for Signature.empty and Parameter.empty."""
+
+
 @dataclass
 class AClickParameter:
     parameter_type: t.Type
@@ -31,7 +35,7 @@ class AClickParameter:
     is_hierarchical: bool = False
     positional_only: bool = False
     keyword_only: bool = False
-    expanded_parameter_type: t.Optional[t.Type] = None
+    expanded_parameter_type: t.Any = _empty
     description: t.Optional[str] = None
 
     @property
@@ -96,6 +100,8 @@ class Command(_click.Command):
     :param short_help: the short help to use for this command.  This is
                        shown on the command listing of the parent command.
                        The callback's docstring is parsed if no help is passed.
+    :param show_defaults: whether to show defaults for all parameters.
+                          Default is ``True``.
     :param add_help_option: by default each command registers a ``--help``
                             option.  This can be disabled by this parameter.
     :param no_args_is_help: this controls what happens if no arguments are
@@ -113,6 +119,7 @@ class Command(_click.Command):
         signature: t.Optional[inspect.Signature] = None,
         hierarchical: bool = False,
         map_parameter_name: t.Optional[ParameterRenamer] = None,
+        show_defaults: t.Optional[bool] = True,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -124,6 +131,7 @@ class Command(_click.Command):
         self.callback_signature: inspect.Signature = signature
         self.hierarchical = hierarchical
         self.map_parameter_name = map_parameter_name
+        self.show_defaults = show_defaults
         self._assert_signature_is_supported(self.callback_signature)
         if (self.help is None or self.short_help is None) and isinstance(
             signature, SignatureWithDescription
@@ -153,34 +161,50 @@ class Command(_click.Command):
                 self.hierarchical
                 and p.is_hierarchical
                 and getattr(p.parameter_type, "__origin__", None) is t.Union
-                and p.expanded_parameter_type is None
+                and p.expanded_parameter_type is _empty
             ):
                 # Switch the type if not already expanded
                 if name in ctx.params:
                     class_name = ctx.params.get(name)
-                    supported_classes = {
-                        x for x in p.parameter_type.__args__ if _is_class(x)
-                    }
-                    parameter_type = next(
-                        (
-                            x
-                            for x in supported_classes
-                            if get_class_name(x) == class_name
-                        ),
-                        None,
-                    )
-                    if parameter_type is None:
-                        supported_classes_names = ", ".join(
-                            sorted(map(get_class_name, supported_classes))
+                    if class_name is None:
+                        if not ctx.resilient_parsing:
+                            raise _click.ClickException(f'Parameter named {name} does not have a correct value ({class_name})')
+                    elif _is_optional(p.parameter_type):
+                        assert isinstance(class_name, bool), 'Parameter does not have a correct type (bool)'
+                        parameter_type = next(x for x in p.parameter_type.__args__ if x is not None)
+                        if class_name is True:
+                            p.expanded_parameter_type = parameter_type
+                            p.children = _parse_signature(
+                                _full_signature(parameter_type), hierarchical=self.hierarchical
+                            )
+                            params_added = True
+                        elif class_name is False:
+                            p.expanded_parameter_type = None
+                            p.children = []
+                    else:
+                        supported_classes = {
+                            x for x in p.parameter_type.__args__ if _is_class(x)
+                        }
+                        parameter_type = next(
+                            (
+                                x
+                                for x in supported_classes
+                                if get_class_name(x) == class_name
+                            ),
+                            None,
                         )
-                        raise _click.ClickException(
-                            f'Class with name "{class_name}" was not found in the set of supported classes {{{supported_classes_names}}}'
+                        if parameter_type is None:
+                            supported_classes_names = ", ".join(
+                                sorted(map(get_class_name, supported_classes))
+                            )
+                            raise _click.ClickException(
+                                f'Class with name "{class_name}" was not found in the set of supported classes {{{supported_classes_names}}}'
+                            )
+                        p.expanded_parameter_type = parameter_type
+                        p.children = _parse_signature(
+                            _full_signature(parameter_type), hierarchical=self.hierarchical
                         )
-                    p.expanded_parameter_type = parameter_type
-                    p.children = _parse_signature(
-                        _full_signature(parameter_type), hierarchical=self.hierarchical
-                    )
-                    params_added = True
+                        params_added = True
 
             for pc in p.children:
                 walk(path + [p.parameter_name], pc)
@@ -202,6 +226,8 @@ class Command(_click.Command):
         if default is not _empty:
             kwargs["default"] = default
             kwargs["required"] = False
+            if not is_argument and self.show_defaults is not None:
+                kwargs["show_default"] = self.show_defaults
         else:
             kwargs["required"] = True
         if help is not None and not is_argument:
@@ -210,11 +236,7 @@ class Command(_click.Command):
         cls = _click.Argument if is_argument else _click.Option
 
         # Handle optional
-        if (
-            getattr(parameter_type, "__origin__", None) is t.Union
-            and len(parameter_type.__args__) == 2
-            and type(None) in parameter_type.__args__
-        ):
+        if _is_optional(parameter_type):
             parameter_type = next(
                 x for x in parameter_type.__args__ if x not in (type(None),)
             )
@@ -312,6 +334,12 @@ class Command(_click.Command):
                             "Only unions of all classes are supported."
                         )
 
+                    if _is_optional(p.parameter_type) and p.parameter_default not in (None, _empty):
+                        raise ValueError(
+                            f"Parameter with parameter name {output_parameter_name} of type {p.parameter_type} with default {p.parameter_default} is not supported. "
+                            "In hierarchical parsing, optional type only supports None as the default value."
+                        )
+                       
                     for x in nonnull_args:
                         for pc in _parse_signature(
                             _full_signature(x), hierarchical=self.hierarchical
@@ -350,11 +378,38 @@ class Command(_click.Command):
                     name = self.map_parameter_name(name)
                 name = name.replace(".", "-").replace("_", "-")
                 opt_name = [f"--{name}", output_parameter_name]
-            parameter_type = p.expanded_parameter_type or p.parameter_type
+            parameter_type = p.expanded_parameter_type if p.expanded_parameter_type is not _empty else p.parameter_type
 
             if not p.positional_only and self.hierarchical and p.is_hierarchical:
                 original_parameter_type = p.parameter_type
-                if (
+                if _is_optional(original_parameter_type):
+                    parameter_type = next(
+                        x for x in original_parameter_type.__args__ if x not in (type(None),)
+                    )
+                    full_parameter_path = ".".join(path + [p.parameter_name])
+                    if p.parameter_default is None:
+                        yield _click.Option(
+                            opt_name,
+                            is_flag=True,
+                            default=False,
+                            is_eager=True,
+                            help=f'Set {full_parameter_path} to a {get_class_name(parameter_type)} instance')
+                    else:
+                        opt_name = [
+                            f"{x}/--no-{x[2:]}" if x.startswith("--") else x
+                            for x in opt_name[:-1]
+                        ] + [opt_name[-1]]
+                        option = _click.Option(
+                            opt_name,
+                            type=_click.types.BoolParamType(),
+                            default=False,
+                            is_eager=True,
+                            required=True,
+                            help=f'Set {full_parameter_path} to a {get_class_name(parameter_type)} instance')
+                        # NOTE: this is fix for 8.0.x version of click
+                        option.default = None
+                        yield option
+                elif (
                     getattr(original_parameter_type, "__origin__", None) is t.Union
                     and sum(1 for x in original_parameter_type.__args__ if _is_class(x))
                     > 1
@@ -414,6 +469,7 @@ class Command(_click.Command):
             while arguments_added:
                 local_ctx = copy.deepcopy(ctx)
                 local_ctx.ignore_unknown_options = True
+                local_ctx.resilient_parsing = True
                 arguments_added = False
                 parser = self.make_parser(local_ctx)
                 opts, args, param_order = parser.parse_args(
@@ -424,7 +480,14 @@ class Command(_click.Command):
                 for param in _click.core.iter_params_for_processing(
                     param_order, params
                 ):
-                    value, args = param.handle_parse_result(local_ctx, opts, args)
+                    # Disable callback temporarily
+                    _callback = None
+                    try:
+                        _callback = param.callback
+                        param.callback = None
+                        value, args = param.handle_parse_result(local_ctx, opts, args)
+                    finally:
+                        param.callback = _callback
 
                 # Add new params
                 arguments_added = self.add_conditional_params(local_ctx, aclick_ctx)
@@ -447,13 +510,13 @@ class Command(_click.Command):
                     kwargs[pc.parameter_name] = build_obj(
                         path + [p.parameter_name], pc, used_parameters
                     )
-                parameter_type = p.expanded_parameter_type or p.parameter_type
-                if _is_optional(parameter_type) and name not in params:
-                    # If no class was selected, we return default
-                    return (
-                        None if p.parameter_default is _empty else p.parameter_default
-                    )
-
+                parameter_type = p.expanded_parameter_type if p.expanded_parameter_type is not _empty else p.parameter_type
+                if _is_optional(p.parameter_type):
+                    used_parameters.add(name)
+                    if params[name]:
+                        return parameter_type(**kwargs)
+                    else:
+                        return None
                 assert (
                     getattr(parameter_type, "__origin__", None) is not t.Union
                 ), f'Parameter with name "{name}" was not expanded'
@@ -637,10 +700,6 @@ class FlattenParameterRenamer(RegexParameterRenamer):
         self._num_levels = num_levels
         num_levels_str = str(num_levels) if num_levels != -1 else ""
         super().__init__([(fr"(?:[^\.]+\.){{,{num_levels_str}}}(.*)", r"\1")])
-
-
-class _empty:
-    """Marker object for Signature.empty and Parameter.empty."""
 
 
 def _parse_signature(
