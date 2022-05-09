@@ -1,4 +1,5 @@
 import inspect
+import traceback
 import typing as t
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -18,13 +19,13 @@ def test_click_defaults(b: str = "test", a: int = 5, c: float = 3.4):
     assert c == 3.4
 
 
-@click_test_error('--help')
+@click_test_error("--help")
 def test_click_defaults_in_help(err, b: str = "test", a: int = 5, c: float = 3.4):
     status, msg = err
     assert status == 0
-    assert 'test' in msg
-    assert '5' in msg
-    assert '3.4' in msg
+    assert "test" in msg
+    assert "5" in msg
+    assert "3.4" in msg
 
 
 @click_test()
@@ -161,7 +162,9 @@ def test_unsupported_types_verified_at_declaration():
         def main(a: t.Callable[[], None]):
             pass
 
-    assert "could not be converted" in str(excinfo.value)
+    assert "Could not build a Click parameter" in "\n".join(
+        traceback.format_exception(None, excinfo.value, None)
+    )
 
 
 def test_unsupported_untyped_parameter():
@@ -185,7 +188,9 @@ def test_unsupported_union_of_simple_types_and_classes():
         def main(a: t.Union[D, str]):
             pass
 
-    assert "is not supported" in str(excinfo.value)
+    assert "is not supported" in "\n".join(
+        traceback.format_exception(None, excinfo.value, None)
+    )
 
 
 #

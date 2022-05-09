@@ -15,32 +15,13 @@ from .utils import (
     _wrap_fn_to_allow_kwargs_instead_of_args,
     get_class_name,
     Literal,
+    ParameterWithDescription,
     SignatureWithDescription,
 )
 
 
+_get_class_name = get_class_name
 _SUPPORTED_TYPES = [str, float, int, bool]
-
-
-class _empty:
-    """Marker object for Signature.empty and Parameter.empty."""
-
-
-@dataclass
-class AClickParameter:
-    parameter_type: t.Type
-    parameter_name: str
-    parameter_default: t.Any = None
-    children: t.List["AClickParameter"] = field(default_factory=list)
-    is_hierarchical: bool = False
-    positional_only: bool = False
-    keyword_only: bool = False
-    expanded_parameter_type: t.Any = _empty
-    description: t.Optional[str] = None
-
-    @property
-    def name(self):
-        return self.parameter_name
 
 
 class ParameterRenamer(metaclass=ABCMeta):
@@ -59,9 +40,61 @@ class ParameterRenamer(metaclass=ABCMeta):
         raise NotImplementedError()  # pragma: no cover
 
 
+class ParameterGroup:
+    def __init__(self, full_name: t.Optional[str]):
+        self.full_name = full_name
+        self.name = full_name.replace(".", "_") if full_name is not None else None
+
+    def assert_is_supported(self, command: "Command") -> "ParameterGroup":
+        return self  # pragma: no cover
+
+    def get_params(
+        self, ctx: _click.Context
+    ) -> t.Iterable[t.Union["ParameterGroup", _click.Parameter]]:
+        return []  # pragma: no cover
+
+    def handle_parse_group_result(self, ctx: _click.Context):
+        pass  # pragma: no cover
+
+    def _handle_parse_group_result_for_class(self, cls: t.Type, ctx: _click.Context):
+        assert isinstance(ctx.command, Command)
+        local_params = dict()
+        for param in _full_signature(cls).parameters.values():
+            param_name = f"{self.full_name}.{param.name}"
+            click_param = ctx.command.build_click_parameter(param_name, param)
+            if click_param is not None and click_param.name is not None:
+                local_params[param.name] = ctx.params.pop(click_param.name)
+        return _wrap_fn_to_allow_kwargs_instead_of_args(cls)(**local_params)
+
+    def _get_params_for_class(self, cls: t.Type, ctx: _click.Context):
+        assert isinstance(ctx.command, Command)
+        for param in _full_signature(cls).parameters.values():
+            param_name = f"{self.full_name}.{param.name}"
+            click_param = ctx.command.build_click_parameter(param_name, param)
+            if click_param is not None:
+                yield click_param
+
+    def _get_or_store_first_value(
+        self, ctx: _click.Context, value: t.Any = inspect._empty
+    ):
+        assert self.name is not None
+        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
+        if self.name in param_groups:
+            return param_groups[self.name]
+        elif value is not inspect._empty:
+            param_groups[self.name] = value
+            return value
+
+    def _get_first_value(self, ctx: _click.Context):
+        assert self.name is not None
+        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
+        return param_groups[self.name]
+
+
 @dataclass
-class AClickContext:
-    params: t.Optional[t.List[AClickParameter]] = None
+class _AClickContext:
+    param_groups: t.List[ParameterGroup] = field(default_factory=list)
+    param_group_contexts: t.Dict[str, t.Any] = field(default_factory=dict)
 
 
 class Command(_click.Command):
@@ -142,96 +175,120 @@ class Command(_click.Command):
             )
             self.help = self.help if self.help is not None else help
 
-    def _wrap_context(self, ctx) -> t.Tuple[_click.Context, AClickContext]:
-        aclick_context = getattr(ctx, "__aclick_context__", None)
-        if aclick_context is None:
-            aclick_context = AClickContext()
-            setattr(ctx, "__aclick_context__", aclick_context)
-        return ctx, aclick_context
-
-    def add_conditional_params(
-        self, ctx: _click.Context, aclick_ctx: AClickContext
-    ) -> bool:
-        params_added = False
-
-        def walk(path, p):
-            nonlocal params_added
-            name = "_".join(path + [p.parameter_name]).replace("-", "_")
-            if (
-                self.hierarchical
-                and p.is_hierarchical
-                and getattr(p.parameter_type, "__origin__", None) is t.Union
-                and p.expanded_parameter_type is _empty
-            ):
-                # Switch the type if not already expanded
-                if name in ctx.params:
-                    class_name = ctx.params.get(name)
-                    if class_name is None:
-                        if not ctx.resilient_parsing:
-                            raise _click.ClickException(f'Parameter named {name} does not have a correct value ({class_name})')
-                    elif _is_optional(p.parameter_type):
-                        assert isinstance(class_name, bool), 'Parameter does not have a correct type (bool)'
-                        parameter_type = next(x for x in p.parameter_type.__args__ if x is not None)
-                        if class_name is True:
-                            p.expanded_parameter_type = parameter_type
-                            p.children = _parse_signature(
-                                _full_signature(parameter_type), hierarchical=self.hierarchical
-                            )
-                            params_added = True
-                        elif class_name is False:
-                            p.expanded_parameter_type = None
-                            p.children = []
-                    else:
-                        supported_classes = {
-                            x for x in p.parameter_type.__args__ if _is_class(x)
-                        }
-                        parameter_type = next(
-                            (
-                                x
-                                for x in supported_classes
-                                if get_class_name(x) == class_name
-                            ),
-                            None,
-                        )
-                        if parameter_type is None:
-                            supported_classes_names = ", ".join(
-                                sorted(map(get_class_name, supported_classes))
-                            )
-                            raise _click.ClickException(
-                                f'Class with name "{class_name}" was not found in the set of supported classes {{{supported_classes_names}}}'
-                            )
-                        p.expanded_parameter_type = parameter_type
-                        p.children = _parse_signature(
-                            _full_signature(parameter_type), hierarchical=self.hierarchical
-                        )
-                        params_added = True
-
-            for pc in p.children:
-                walk(path + [p.parameter_name], pc)
-
-        if aclick_ctx.params is not None:
-            for p in aclick_ctx.params:
-                walk([], p)
-        return params_added
-
     def build_click_parameter(
         self,
-        option_name: t.Sequence[str],
-        parameter_type: t.Type,
-        default: t.Any,
-        help: t.Optional[str],
-        is_argument: bool,
-    ) -> t.Optional[_click.Parameter]:
+        full_name: str,
+        param: t.Union[inspect.Parameter, ParameterWithDescription],
+    ) -> t.Optional[t.Union[_click.Parameter, ParameterGroup]]:
+        if param.kind not in {
+            inspect.Parameter.KEYWORD_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.POSITIONAL_ONLY,
+        }:
+            # Do not add the parameter for *args and **kwargs
+            return None
+
+        if param.annotation is inspect._empty:
+            raise ValueError(
+                f'Parameter named "{full_name}" does not have it\'s type specified.'
+            )
+
+        is_argument = param.kind == inspect.Parameter.POSITIONAL_ONLY
+        is_hierarchical = self.hierarchical and _is_hierarchical(param)
+        parameter_type = param.annotation
+        option_name = []
+
+        if param.kind == inspect.Parameter.POSITIONAL_ONLY and "." in full_name:
+            raise ValueError(
+                f'Positional arguments are allowed only on top level. Failed argument name is "{full_name}".'
+            )
+
+        parameter_name = full_name.replace(".", "_")
+        option_name = [parameter_name]
+        if not is_argument:
+            parameter_name = full_name
+            if self.map_parameter_name is not None:
+                parameter_name = self.map_parameter_name(parameter_name)
+            parameter_name = parameter_name.replace(".", "-").replace("_", "-")
+            option_name.insert(0, f"--{parameter_name}")
+
+        if is_hierarchical:
+            assert not is_argument, (
+                f"Hierarchical arguments (name: {full_name}) are not supported. "
+                "Only simple types can be used in hierarchical parsing"
+            )
+
+            if getattr(param.annotation, "__origin__", None) is t.Union:
+                # Validate hierarchical param
+                nonnull_args = [
+                    x for x in param.annotation.__args__ if x not in (type(None),)
+                ]
+                all_classes = all(map(_is_class, nonnull_args))
+                if not all_classes:
+                    raise ValueError(
+                        f"Parameter with parameter name {full_name} of type {param.annotation} is not supported. "
+                        "Only unions of all classes are supported."
+                    )
+
+                if not _is_optional(param.annotation) and len(
+                    param.annotation.__args__
+                ) != len(nonnull_args):
+                    raise ValueError(
+                        f"Parameter with parameter name {full_name} of type {param.annotation} is not supported. "
+                        "Only unions of all classes are supported (without None)."
+                    )
+
+                if _is_optional(param.annotation) and param.default not in (
+                    None,
+                    inspect._empty,
+                ):
+                    raise ValueError(
+                        f"Parameter with parameter name {full_name} of type {param.annotation} with default {param.default} is not supported. "
+                        "In hierarchical parsing, optional type only supports None as the default value."
+                    )
+
+                # Construct the parameter
+                if _is_optional(param.annotation):
+                    parameter_type = next(
+                        x for x in param.annotation.__args__ if x not in (type(None),)
+                    )
+                    return OptionalTypeHierarchicalOption(
+                        parameter_name,
+                        full_name,
+                        parameter_type,
+                        required=param.default is inspect._empty,
+                        get_class_name=self._get_custom_class_name,
+                    ).assert_is_supported(self)
+                elif getattr(param.annotation, "__origin__", None) is t.Union:
+                    values = [x for x in param.annotation.__args__ if _is_class(x)]
+                    return UnionTypeHierarchicalOption(
+                        parameter_name,
+                        full_name,
+                        classes=values,
+                        required=True,
+                        get_class_name=self._get_custom_class_name,
+                    ).assert_is_supported(self)
+
+            elif _is_class(param.annotation):
+                if param.default is not inspect._empty:
+                    raise ValueError(
+                        "Cannot use a parameter with a default in hierarchical parsing.\n"
+                        f"Name of the bad parameter is: {full_name}"
+                    )
+                return ClassHierarchicalOption(
+                    full_name, param.annotation
+                ).assert_is_supported(self)
+
         kwargs = dict()
-        if default is not _empty:
-            kwargs["default"] = default
+        if param.default is not inspect._empty:
+            kwargs["default"] = param.default
             kwargs["required"] = False
             if not is_argument and self.show_defaults is not None:
                 kwargs["show_default"] = self.show_defaults
         else:
             kwargs["required"] = True
-        if help is not None and not is_argument:
-            kwargs["help"] = help
+        if help is not None and not is_argument and hasattr(param, "description"):
+            kwargs["help"] = getattr(param, "description")
         original_parameter_type = parameter_type
         cls = _click.Argument if is_argument else _click.Option
 
@@ -288,195 +345,65 @@ class Command(_click.Command):
                 return option
             else:
                 return cls(option_name, **kwargs)
-        return None
+        raise ValueError(
+            "Could not build a Click parameter for parameter with name: {full_name} and type: {p.annotation}"
+        )
 
-    def _assert_signature_is_supported(self, signature: inspect.Signature) -> None:
-        aclick_params = _parse_signature(signature)
+    def _assert_signature_is_supported(
+        self, signature: inspect.Signature, base_path: str = ""
+    ) -> None:
+        for p in signature.parameters.values():
+            self.build_click_parameter(base_path + p.name, p)
 
-        def walk(path, p):
-            output_parameter_name = "_".join(path + [p.parameter_name])
-            if p.parameter_type is _empty:
-                raise ValueError(
-                    f'Parameter named "{output_parameter_name}" does not have it\'s type specified.'
-                )
-
-            if p.positional_only:
-                if len(path) > 0:
-                    raise ValueError(
-                        f'Positional arguments are allowed only on top level. Failed argument name is "{output_parameter_name}".'
-                    )
-                assert not self.hierarchical or not p.is_hierarchical, (
-                    f"Hierarchical arguments (name: {output_parameter_name}) are not supported. "
-                    "Only simple types can be used in hierarchical parsing"
-                )
-                parameter = self.build_click_parameter(
-                    [output_parameter_name],
-                    p.parameter_type,
-                    p.parameter_default,
-                    help=p.description,
-                    is_argument=True,
-                )
-                if parameter is None:
-                    raise ValueError(
-                        f"Argument with name {output_parameter_name} of type {p.parameter_type} could not be converted to a click Argument"
-                    )
-
-            elif self.hierarchical and p.is_hierarchical:
-                # For hierarchical, we support only union of classes or optional
-                if getattr(p.parameter_type, "__origin__", None) is t.Union:
-                    nonnull_args = [
-                        x for x in p.parameter_type.__args__ if x not in (type(None),)
-                    ]
-                    all_classes = all(map(_is_class, nonnull_args))
-                    if not all_classes:
-                        raise ValueError(
-                            f"Parameter with parameter name {output_parameter_name} of type {p.parameter_type} is not supported. "
-                            "Only unions of all classes are supported."
-                        )
-
-                    if _is_optional(p.parameter_type) and p.parameter_default not in (None, _empty):
-                        raise ValueError(
-                            f"Parameter with parameter name {output_parameter_name} of type {p.parameter_type} with default {p.parameter_default} is not supported. "
-                            "In hierarchical parsing, optional type only supports None as the default value."
-                        )
-                       
-                    for x in nonnull_args:
-                        for pc in _parse_signature(
-                            _full_signature(x), hierarchical=self.hierarchical
-                        ):
-                            walk(path + [p.parameter_name, pc.parameter_name], pc)
-                elif _is_class(p.parameter_type):
-                    for pc in _parse_signature(_full_signature(p.parameter_type)):
-                        walk(path + [p.parameter_name, pc.parameter_name], pc)
-            else:
-                parameter = self.build_click_parameter(
-                    [f"--{output_parameter_name}", output_parameter_name],
-                    p.parameter_type,
-                    p.parameter_default,
-                    help=p.description,
-                    is_argument=False,
-                )
-                if parameter is None:
-                    raise ValueError(
-                        f"Parameter with parameter name {output_parameter_name} of type {p.parameter_type} could not be converted to a click Option"
-                    )
-
-        for p in aclick_params:
-            walk([], p)
-
-    def _get_click_parameters(self, parameters: t.List[AClickParameter]):
-        def walk(path, p):
-            kwargs: t.Dict[str, t.Any] = dict()
-            children = p.children
-            output_parameter_name = "_".join(path + [p.parameter_name])
-            if p.positional_only:
-                opt_name = [output_parameter_name]
-            else:
-                name = "-".join(path + [p.parameter_name]).replace("_", "-")
-                name = ".".join(path + [p.parameter_name])
-                if self.map_parameter_name is not None:
-                    name = self.map_parameter_name(name)
-                name = name.replace(".", "-").replace("_", "-")
-                opt_name = [f"--{name}", output_parameter_name]
-            parameter_type = p.expanded_parameter_type if p.expanded_parameter_type is not _empty else p.parameter_type
-
-            if not p.positional_only and self.hierarchical and p.is_hierarchical:
-                original_parameter_type = p.parameter_type
-                if _is_optional(original_parameter_type):
-                    parameter_type = next(
-                        x for x in original_parameter_type.__args__ if x not in (type(None),)
-                    )
-                    full_parameter_path = ".".join(path + [p.parameter_name])
-                    if p.parameter_default is None:
-                        yield _click.Option(
-                            opt_name,
-                            is_flag=True,
-                            default=False,
-                            is_eager=True,
-                            help=f'Set {full_parameter_path} to a {get_class_name(parameter_type)} instance')
-                    else:
-                        opt_name = [
-                            f"{x}/--no-{x[2:]}" if x.startswith("--") else x
-                            for x in opt_name[:-1]
-                        ] + [opt_name[-1]]
-                        option = _click.Option(
-                            opt_name,
-                            type=_click.types.BoolParamType(),
-                            default=False,
-                            is_eager=True,
-                            required=True,
-                            help=f'Set {full_parameter_path} to a {get_class_name(parameter_type)} instance')
-                        # NOTE: this is fix for 8.0.x version of click
-                        option.default = None
-                        yield option
-                elif (
-                    getattr(original_parameter_type, "__origin__", None) is t.Union
-                    and sum(1 for x in original_parameter_type.__args__ if _is_class(x))
-                    > 1
-                ):
-                    values = [
-                        get_class_name(x)
-                        for x in original_parameter_type.__args__
-                        if _is_class(x)
-                    ]
-                    kwargs["type"] = _click.types.Choice(values, case_sensitive=False)
-                    kwargs["is_eager"] = True
-                    yield _click.Option(opt_name, **kwargs)
-            else:
-                parameter = self.build_click_parameter(
-                    opt_name,
-                    parameter_type,
-                    p.parameter_default,
-                    help=p.description,
-                    is_argument=p.positional_only,
-                )
-                assert (
-                    parameter is not None
-                ), f"Parameter with parameter name {output_parameter_name} of type {p.parameter_type} could not be converted to a click Parameter"
-                yield parameter
-
-            if not p.positional_only and self.hierarchical and p.is_hierarchical:
-                for pc in children:
-                    yield from walk(path + [p.parameter_name], pc)
-
-        for p in parameters:
-            yield from walk([], p)
+    def _get_custom_class_name(self, cls):
+        return get_class_name(cls).replace("_", "-")
 
     def get_params(self, ctx: _click.Context):
-        ctx, aclick_ctx = self._wrap_context(ctx)
-        assert (
-            aclick_ctx.params is not None
-        ), "parse_args method was not called before get_params method"
-
-        aclick_params = aclick_ctx.params
+        aclick_ctx = ctx.ensure_object(_AClickContext)
+        aclick_ctx.param_groups = []
         params = super().get_params(ctx)
         existing_names = {x.name for x in params}
-        params.extend(
-            x
-            for x in self._get_click_parameters(aclick_params)
-            if x.name not in existing_names
-        )
+        signature_params = []
+        for p in self.callback_signature.parameters.values():
+            click_param = self.build_click_parameter(p.name, p)
+            if click_param is not None:
+                signature_params.append(click_param)
+
+        def walk(p):
+            if isinstance(p, _click.Parameter) and p.name not in existing_names:
+                params.append(p)
+            if isinstance(p, ParameterGroup):
+                aclick_ctx.param_groups.append(p)
+                for p_child in p.get_params(ctx):
+                    walk(p_child)
+
+        for param in signature_params:
+            walk(param)
         return params
 
     def parse_args(self, ctx: _click.Context, args: t.List[str]) -> t.List[str]:
         original_args = args
-        ctx, aclick_ctx = self._wrap_context(ctx)
-        aclick_ctx.params = _parse_signature(
-            self.callback_signature, hierarchical=self.hierarchical
-        )
+        aclick_ctx = ctx.ensure_object(_AClickContext)
         if self.hierarchical:
-            arguments_added = True
-            while arguments_added:
-                local_ctx = copy.deepcopy(ctx)
-                local_ctx.ignore_unknown_options = True
-                local_ctx.resilient_parsing = True
-                arguments_added = False
+            last_num_params = 0
+            local_ctx = copy.deepcopy(ctx)
+
+            # Share param group contexts with the local context
+            local_ctx.ensure_object(
+                _AClickContext
+            ).param_group_contexts = aclick_ctx.param_group_contexts
+            local_ctx.ignore_unknown_options = True
+            local_ctx.resilient_parsing = True
+            while True:
                 parser = self.make_parser(local_ctx)
                 opts, args, param_order = parser.parse_args(
                     args=copy.deepcopy(original_args)
                 )
 
                 params = self.get_params(local_ctx)
+                if last_num_params == len(params):
+                    break
+                last_num_params = len(params)
                 for param in _click.core.iter_params_for_processing(
                     param_order, params
                 ):
@@ -489,50 +416,12 @@ class Command(_click.Command):
                     finally:
                         param.callback = _callback
 
-                # Add new params
-                arguments_added = self.add_conditional_params(local_ctx, aclick_ctx)
-        result = super().parse_args(ctx, original_args)
+        super().parse_args(ctx, original_args)
 
-        # Bind hierarchical parameters to correct types
-        if self.hierarchical:
-            params = ctx.params
-            remove_parameters: t.Set[str] = set()
+        for param_group in reversed(aclick_ctx.param_groups):
+            param_group.handle_parse_group_result(ctx)
 
-            def build_obj(path, p, used_parameters):
-                name = "_".join(path + [p.parameter_name]).replace("-", "_")
-                if not p.is_hierarchical or not self.hierarchical:
-                    if name in ctx.params:
-                        used_parameters.add(name)
-                    return ctx.params.get(name, _empty)
-
-                kwargs = dict()
-                for pc in p.children:
-                    kwargs[pc.parameter_name] = build_obj(
-                        path + [p.parameter_name], pc, used_parameters
-                    )
-                parameter_type = p.expanded_parameter_type if p.expanded_parameter_type is not _empty else p.parameter_type
-                if _is_optional(p.parameter_type):
-                    used_parameters.add(name)
-                    if params[name]:
-                        return parameter_type(**kwargs)
-                    else:
-                        return None
-                assert (
-                    getattr(parameter_type, "__origin__", None) is not t.Union
-                ), f'Parameter with name "{name}" was not expanded'
-                return parameter_type(**kwargs)
-
-            keep_parameters = set()
-            for p in aclick_ctx.params:
-                if self.hierarchical and p.is_hierarchical:
-                    assert p.parameter_name is not None
-                    assert not p.positional_only
-                    params[p.parameter_name] = build_obj([], p, remove_parameters)
-                    keep_parameters.add(p.name)
-            remove_parameters.difference_update(keep_parameters)
-            for pr in remove_parameters:
-                params.pop(pr)
-        return result
+        return ctx.args
 
 
 class Group(_click.Group, Command):
@@ -702,55 +591,19 @@ class FlattenParameterRenamer(RegexParameterRenamer):
         super().__init__([(fr"(?:[^\.]+\.){{,{num_levels_str}}}(.*)", r"\1")])
 
 
-def _parse_signature(
-    signature: t.Union[inspect.Signature, SignatureWithDescription],
-    hierarchical: bool = False,
-) -> t.List[AClickParameter]:
-    params = []
-    for p in signature.parameters.values():
-        if (
-            p.kind == inspect.Parameter.KEYWORD_ONLY
-            or p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-            or p.kind == inspect.Parameter.POSITIONAL_ONLY
+def _is_hierarchical(param: inspect.Parameter) -> bool:
+    is_hierarchical = False
+    if param.annotation is not inspect._empty and param.kind in {
+        inspect.Parameter.KEYWORD_ONLY,
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+    }:
+        if _is_class(param.annotation):
+            is_hierarchical = True
+        elif getattr(param.annotation, "__origin__", None) is t.Union and any(
+            _is_class(x) for x in param.annotation.__args__
         ):
-            children = []
-            parameter_type = p.annotation
-            parameter_default = _empty if p.default is inspect._empty else p.default
-            is_hierarchical = False
-            if parameter_type is inspect._empty:
-                parameter_type = _empty
-            elif p.kind != inspect.Parameter.POSITIONAL_ONLY:
-                if _is_class(parameter_type):
-                    is_hierarchical = True
-                    if hierarchical:
-                        child_signature = _full_signature(parameter_type)
-                        children = _parse_signature(
-                            child_signature, hierarchical=hierarchical
-                        )
-                elif getattr(parameter_type, "__origin__", None) is t.Union and any(
-                    _is_class(x) for x in parameter_type.__args__
-                ):
-                    is_hierarchical = True
-            if is_hierarchical:
-                if parameter_default is not _empty and parameter_default is not None:
-                    raise ValueError(
-                        "Cannot use non-default parameter with hierarchical parsing.\n"
-                        "Name of the bad parameter is: {p.name}"
-                    )
-
-            param = AClickParameter(
-                parameter_name=p.name,
-                parameter_type=parameter_type,
-                children=children,
-                is_hierarchical=is_hierarchical,
-                positional_only=(p.kind == inspect.Parameter.POSITIONAL_ONLY),
-                keyword_only=(p.kind == inspect.Parameter.KEYWORD_ONLY),
-                parameter_default=parameter_default,
-                description=getattr(p, "description", None),
-            )
-
-            params.append(param)
-    return params
+            is_hierarchical = True
+    return is_hierarchical
 
 
 def _is_optional(tp):
@@ -758,3 +611,181 @@ def _is_optional(tp):
         getattr(tp, "__origin__", None) is t.Union
         and sum(1 for x in tp.__args__ if x not in (type(None),)) == 1
     )
+
+
+class ClassHierarchicalOption(ParameterGroup):
+    def __init__(self, name: str, type: t.Type):
+        super().__init__(name)
+        self.class_type = type
+
+    def assert_is_supported(self, command: Command) -> "ClassHierarchicalOption":
+        assert self.full_name is not None
+        command._assert_signature_is_supported(
+            _full_signature(self.class_type), self.full_name + "."
+        )
+        return self
+
+    def get_params(self, ctx: _click.Context):
+        return self._get_params_for_class(self.class_type, ctx)
+
+    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
+        assert isinstance(ctx.command, Command)
+        assert self.name is not None
+
+        ctx.params[self.name] = self._handle_parse_group_result_for_class(
+            self.class_type, ctx
+        )
+
+
+class UnionTypeHierarchicalOption(_click.Option, ParameterGroup):
+    def __init__(
+        self,
+        parameter_name: str,
+        name: str,
+        classes: t.List[t.Type],
+        required: bool = False,
+        get_class_name: t.Optional[t.Callable[[t.Type], str]] = None,
+    ):
+        ParameterGroup.__init__(self, name)
+        self.classes = classes
+        self.get_class_name = get_class_name or _get_class_name
+        self._init_click_option(parameter_name, name, type, required)
+
+    def assert_is_supported(self, command: Command) -> "UnionTypeHierarchicalOption":
+        assert self.full_name is not None
+        for c in self.classes:
+            command._assert_signature_is_supported(
+                _full_signature(c), self.full_name + "."
+            )
+        return self
+
+    def _init_click_option(self, parameter_name, name, type, required):
+        opt_name = [f"--{parameter_name}", name.replace(".", "_")]
+
+        if required:
+            kwargs: t.Dict[str, t.Any] = dict(required=True)
+        else:
+            kwargs = dict(default=None)
+        _click.Option.__init__(
+            self,
+            opt_name,
+            is_eager=True,
+            type=_click.types.Choice(
+                [self.get_class_name(x) for x in self.classes], case_sensitive=False
+            ),
+            help=f"Set {name} to a {self.get_class_name(type)} instance",
+            **kwargs,
+        )
+
+    def get_params(self, ctx: _click.Context):
+        assert isinstance(ctx.command, Command)
+        assert isinstance(self.name, str)
+
+        current_value = self._get_or_store_first_value(
+            ctx, ctx.params.get(self.name, inspect._empty)
+        )
+        if current_value is not None:
+            assert isinstance(current_value, str)
+            class_map = {self.get_class_name(x): x for x in self.classes}
+
+            if current_value not in class_map:
+                supported_classes_names = ", ".join(
+                    sorted(map(self.get_class_name, self.classes))
+                )
+                raise _click.ClickException(
+                    f'Class with name "{current_value}" was not found in the set of supported classes {{{supported_classes_names}}}'
+                )
+            assert current_value in class_map
+            class_type = class_map[current_value]
+            return self._get_params_for_class(class_type, ctx)
+        return []
+
+    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
+        assert isinstance(ctx.command, Command)
+        assert isinstance(self.name, str)
+
+        ctx.params.pop(self.name)
+        control_parameter_value = self._get_first_value(ctx)
+        if control_parameter_value is not None:
+            assert isinstance(control_parameter_value, str)
+            class_map = {self.get_class_name(x): x for x in self.classes}
+            assert control_parameter_value in class_map
+            class_type = class_map[control_parameter_value]
+            ctx.params[self.name] = self._handle_parse_group_result_for_class(
+                class_type, ctx
+            )
+
+
+class OptionalTypeHierarchicalOption(_click.Option, ParameterGroup):
+    def __init__(
+        self,
+        parameter_name: str,
+        name: str,
+        type: t.Type,
+        required: bool = False,
+        get_class_name: t.Optional[t.Callable[[t.Type], str]] = None,
+    ):
+        ParameterGroup.__init__(self, name)
+        self.optional_type = type
+        self.get_class_name = get_class_name or _get_class_name
+        self._init_click_option(parameter_name, name, type, required)
+
+    def _init_click_option(self, parameter_name, name, type, required):
+        opt_name = [f"--{parameter_name}", name.replace(".", "_")]
+
+        if required:
+            opt_name = [
+                f"{x}/--no-{x[2:]}" if x.startswith("--") else x for x in opt_name[:-1]
+            ] + [opt_name[-1]]
+            _click.Option.__init__(
+                self,
+                opt_name,
+                type=_click.types.BoolParamType(),
+                default=False,
+                is_eager=True,
+                required=True,
+                help=f"Set {name} to a {self.get_class_name(type)} instance",
+            )
+            # NOTE: this is fix for 8.0.x version of click
+            self.default = None
+        else:
+            _click.Option.__init__(
+                self,
+                opt_name,
+                is_flag=True,
+                default=False,
+                is_eager=True,
+                help=f"Set {name} to a {self.get_class_name(type)} instance",
+            )
+
+    def assert_is_supported(self, command: Command) -> "OptionalTypeHierarchicalOption":
+        assert self.full_name is not None
+        command._assert_signature_is_supported(
+            _full_signature(self.optional_type), self.full_name + "."
+        )
+        return self
+
+    def get_params(self, ctx: _click.Context):
+        assert isinstance(ctx.command, Command)
+        assert isinstance(self.name, str)
+
+        current_value = self._get_or_store_first_value(
+            ctx, ctx.params.get(self.name, inspect._empty)
+        )
+        if current_value is not None and current_value:
+            return self._get_params_for_class(self.optional_type, ctx)
+        return []
+
+    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
+        assert isinstance(ctx.command, Command)
+        assert isinstance(self.name, str)
+
+        ctx.params.pop(self.name)
+        control_parameter_value = self._get_first_value(ctx)
+        assert isinstance(control_parameter_value, bool)
+        if control_parameter_value:
+            ctx.params[self.name] = self._handle_parse_group_result_for_class(
+                self.optional_type, ctx
+            )
+        else:
+            ctx.params[self.name] = None

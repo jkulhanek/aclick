@@ -21,7 +21,7 @@ First, we will motivate the reader by a simple example:
             self.n_layers = n_layers
 
         def train(self):
-            click.echo('Training model A with {model.n_layers} layers.')
+            click.echo(f'Training model A with {self.n_layers} layers.')
 
     class ModelB(ModelA):
         def __init__(self, *args, n_blocks: int = 5, **kwargs):
@@ -29,7 +29,7 @@ First, we will motivate the reader by a simple example:
             self.n_blocks = n_blocks
 
         def train(self):
-            click.echo('Training model B with {model.n_blocks} blocks.')
+            click.echo(f'Training model B with {self.n_blocks} blocks.')
 
 
     @aclick.command()
@@ -43,4 +43,4 @@ We can invoke the script as follows:
 
 .. click:run::
 
-    invoke(main, args=['--model', 'model_b(test, n_layers=2)'], prog_name='python hello.py')
+    invoke(main, args=['--model', 'model-b(test, n-layers=2)'], prog_name='python hello.py')

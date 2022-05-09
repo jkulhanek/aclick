@@ -26,12 +26,18 @@ def test_dataclass_no_default_error():
         def test_dataclass_no_default(a: D1 = D1("ok")):
             pass
 
-    assert "Cannot use non-default parameter with hierarchical parsing" in str(
+    assert "Cannot use a parameter with a default in hierarchical parsing" in str(
         exinfo.value
     )
 
 
-def test_dataclass_union_nonuniform_error():
+@dataclass
+class D2:
+    test: str = "ok"
+    test2: int = 4
+
+
+def test_dataclass_union_validation():
     with pytest.raises(ValueError) as exinfo:
 
         @aclick.command(hierarchical=True)
@@ -40,11 +46,13 @@ def test_dataclass_union_nonuniform_error():
 
     assert "is not supported" in str(exinfo.value)
 
+    with pytest.raises(ValueError) as exinfo:
 
-@dataclass
-class D2:
-    test: str = "ok"
-    test2: int = 4
+        @aclick.command(hierarchical=True)
+        def test_dataclass_no_default2(a: t.Union[D1, D2, None]):
+            pass
+
+    assert "is not supported" in str(exinfo.value)
 
 
 def test_dataclass_default(monkeypatch):
@@ -56,7 +64,7 @@ def test_dataclass_default(monkeypatch):
     ctx = click.Context(test_dataclass_default)
     test_dataclass_default.parse_args(ctx, [])
     params = test_dataclass_default.get_params(ctx)
-    assert params[1].default == 'ok'
+    assert params[1].default == "ok"
     assert params[2].default == 4
 
     @click_test(hierarchical=True)
@@ -67,6 +75,16 @@ def test_dataclass_default(monkeypatch):
     test_dataclass_default(monkeypatch)
 
 
+def test_dataclass_optional_validation():
+    with pytest.raises(ValueError) as excinfo:
+
+        @aclick.command(hierarchical=True)
+        def test_dataclass_optional(a: t.Optional[D2] = D2()):
+            assert a is None
+
+    assert "is not supported" in str(excinfo.value)
+
+
 def test_dataclass_optional(monkeypatch):
     @click_test(hierarchical=True)
     def test_dataclass_optional(a: t.Optional[D2] = None):
@@ -75,20 +93,21 @@ def test_dataclass_optional(monkeypatch):
     test_dataclass_optional(monkeypatch)
 
     class Schedule:
-        def __init__(self, type: str = 'constant', constant: float = 1e-4):
+        def __init__(self, type: str = "constant", constant: float = 1e-4):
             self.type = type
             self.constant = constant
 
     @dataclass
     class Model:
-        '''
+        """
         :param learning_rate: Learning rate
         :param num_features: Number of features
-        '''
+        """
+
         learning_rate: t.Optional[Schedule] = None
         num_features: int = 5
 
-    @click_test('--model-learning-rate', hierarchical=True)
+    @click_test("--model-learning-rate", hierarchical=True)
     def train(model: Model, num_epochs: int = 5):
         assert model is not None
         assert isinstance(model.learning_rate, Schedule)
@@ -104,10 +123,11 @@ def test_dataclass_optional(monkeypatch):
 
     @dataclass
     class Model:
-        '''
+        """
         :param learning_rate: Learning rate
         :param num_features: Number of features
-        '''
+        """
+
         learning_rate: t.Optional[Schedule]
         num_features: int = 5
 
@@ -115,33 +135,32 @@ def test_dataclass_optional(monkeypatch):
     def train(err, model: Model, num_epochs: int = 5):
         status, msg = err
         assert status != 0
-        assert 'missing option' in msg.lower()
+        assert "missing option" in msg.lower()
 
     train(monkeypatch)
 
-    @click_test('--no-model-learning-rate', hierarchical=True)
+    @click_test("--no-model-learning-rate", hierarchical=True)
     def train(model: Model, num_epochs: int = 5):
         assert model is not None
         assert model.learning_rate is None
 
     train(monkeypatch)
 
-    @click_test('--model-learning-rate', hierarchical=True)
+    @click_test("--model-learning-rate", hierarchical=True)
     def train(model: Model, num_epochs: int = 5):
         assert model is not None
         assert model.learning_rate is not None
 
     train(monkeypatch)
 
-    @click_test_error('--model-learning-rate', '--help', hierarchical=True)
+    @click_test_error("--model-learning-rate", "--help", hierarchical=True)
     def train(err, model: Model, num_epochs: int = 5):
         status, msg = err
         assert status == 0
         print(msg)
-        assert '--model-learning-rate-constant' in msg
+        assert "--model-learning-rate-constant" in msg
 
     train(monkeypatch)
-
 
 
 def test_union_of_dataclasses(monkeypatch):
@@ -155,28 +174,40 @@ def test_union_of_dataclasses(monkeypatch):
 
     @dataclass
     class ModelA:
-        '''
+        """
         :param learning_rate: Learning rate
         :param num_features: Number of features
-        '''
+        """
+
         learning_rate: float = 0.1
         num_features: int = 5
 
     @dataclass
     class ModelB:
-        '''
+        """
         :param learning_rate: Learning rate
         :param num_layers: Number of layers
-        '''
+        """
+
         learning_rate: float = 0.2
         num_layers: int = 10
 
-
-    @click_test_error('--help', hierarchical=True)
+    @click_test_error("--help", hierarchical=True)
     def train(err, model: t.Union[ModelA, ModelB], num_epochs: int):
         status, msg = err
-        print(msg)
         assert status == 0
+        assert "model-a" in msg
+        assert "model-b" in msg
+        assert "num-layers" not in msg
+
+    train(monkeypatch)
+
+    @click_test_error("--model", "model-b", "--help", hierarchical=True)
+    def train(err, model: t.Union[ModelA, ModelB], num_epochs: int):
+        status, msg = err
+        assert status == 0
+        print(msg)
+        assert "num-layers" in msg
 
     train(monkeypatch)
 

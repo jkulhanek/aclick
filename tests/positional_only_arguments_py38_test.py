@@ -1,3 +1,4 @@
+import traceback
 import typing as t
 from dataclasses import dataclass
 from typing import List
@@ -107,6 +108,31 @@ def test_simple_optional_argument(monkeypatch, tp, arg, val):
     main(monkeypatch)
 
 
+@pytest.mark.parametrize(
+    ("tp", "arg", "val"),
+    [
+        (str, "test", "test"),
+        (int, "42", 42),
+        (float, "3.14", 3.14),
+        (bool, "true", True),
+        (bool, "t", True),
+        (bool, "yes", True),
+        (bool, "1", True),
+        (bool, "false", False),
+        (bool, "f", False),
+        (bool, "no", False),
+        (bool, "0", False),
+    ],
+)
+def test_args_kwargs(monkeypatch, tp, arg, val):
+    @click_test(arg)
+    def main(a: tp, b: int = 3, /, *args, **kwargs):
+        assert a == val
+        assert b == 3
+
+    main(monkeypatch)
+
+
 #
 # Inline types
 #
@@ -208,7 +234,9 @@ def test_unsupported_types_verified_at_declaration():
         def main(a: t.Callable[[], None], /):
             pass
 
-    assert "could not be converted" in str(excinfo.value)
+    assert "Could not build a Click" in "\n".join(
+        traceback.format_exception(None, excinfo.value, None)
+    )
 
 
 def test_unsupported_untyped_parameter():
@@ -232,7 +260,9 @@ def test_unsupported_union_of_simple_types_and_classes():
         def main(a: t.Union[D, str], /):
             pass
 
-    assert "is not supported" in str(excinfo.value)
+    assert "is not supported" in "\n".join(
+        traceback.format_exception(None, excinfo.value, None)
+    )
 
 
 def test_custom_class(monkeypatch):

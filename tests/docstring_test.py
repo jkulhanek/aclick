@@ -272,7 +272,7 @@ def test_full_signature_copies_parameter_descriptions():
     assert x.parameters["deployment"].description == "UUID or name of the deployment"
 
 
-def test_signatute_description_in_click_help(monkeypatch):
+def test_signature_description_in_click_help(monkeypatch):
     def a(error, a: str, b: int):
         """
         Test function description.

@@ -52,9 +52,3 @@ Other classes
 .. autoclass:: aclick.RegexParameterRenamer
 
 .. autoclass:: aclick.FlattenParameterRenamer
-
-.. autoclass:: aclick.core.AClickParameter
-   :members:
-
-.. autoclass:: aclick.core.AClickContext
-   :members:
