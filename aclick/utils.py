@@ -700,6 +700,17 @@ class _ClassArgument:
         return _ClassArgument.parse_argument(string)[-1]
 
 
+def build_examples(class_type: t.Type, limit: int = -1) -> t.List[t.Any]:
+    examples = []
+    types = [class_type]
+    if getattr(class_type, '__origin__', None) is t.Union:
+        types = [x for x in getattr(class_type, '__args__') if x not in (type(None),)]
+
+    n_child_types = max(1, limit // len(types))
+    for t in types:
+        sub_examples = build_examples(t)
+
+
 def _parse_class_structure_for_all_descendents(
     cls, value: str, *, base_cls, method_name="from_str"
 ):
