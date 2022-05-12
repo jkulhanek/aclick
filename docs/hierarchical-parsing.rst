@@ -17,9 +17,11 @@ parameter. This is illustrated in the following example:
         num_features: int = 5
 
     
-    @aclick.command(hierarchical=True)
+    @aclick.command
     def train(model: Model, num_epochs: int):
-        print(f'lr: {learning_rate}, num_features: {model.num_features}, num_epochs: {num_epochs}')
+        print(f'''lr: {learning_rate},
+    num_features: {model.num_features},
+    num_epochs: {num_epochs}''')
 
 
 The corresponding help page looks as follows:
@@ -29,10 +31,16 @@ The corresponding help page looks as follows:
     invoke(train, args=['--help'], prog_name='python train.py')
 
 
+Note, that in some cases hierarchical parsing may not support your type,
+default value, etc. In particular, positional arguments cannot be expanded
+in hierarchical parsing. If your type in not supported, you can either inline
+it by wrapping it with :func:`aclick.default_from_str` wrapper or turn of hierarchical
+parsing by passing ``hierarchical = False`` to the command constructor.
+
 Custom classes
 --------------
 
-User defined classes are naturally expand to individual parameters if ``hierarchical = True``.
+User defined classes are naturally expand to individual parameters if ``hierarchical = True`` (default).
 We can have a class hierarchy and parameters will be expanded to the lowest level. This
 can be seen in the following example:
 
@@ -52,7 +60,7 @@ can be seen in the following example:
         num_features: int = 5
 
     
-    @aclick.command(hierarchical=True)
+    @aclick.command
     def train(model: Model, num_epochs: int):
         pass
 
@@ -87,7 +95,7 @@ This is illustrated in the following example:
         num_features: int = 5
 
     
-    @aclick.command(hierarchical=True)
+    @aclick.command
     def train(model: Model, num_epochs: int):
         pass
 
@@ -134,7 +142,7 @@ This scenario is illustrated in the following example:
         num_layers: int = 10
 
     
-    @aclick.command(hierarchical=True)
+    @aclick.command
     def train(model: t.Union[ModelA, ModelB], num_epochs: int):
         pass
 
@@ -151,4 +159,3 @@ And after specifying that we want to use ``ModelB`` class:
 .. click:run::
 
     invoke(train, args=['--model', 'model-b', '--help'], prog_name='python train.py')
-

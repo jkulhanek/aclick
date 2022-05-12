@@ -10,7 +10,7 @@ class D1:
     test: str
 
 
-@click_test("--a", 'd1("passed")')
+@click_test("--a", 'd1("passed")', hierarchical=False)
 def test_dataclass(a: D1):
     assert isinstance(a, D1)
     assert a.test == "passed"
@@ -21,14 +21,14 @@ def test_dataclass_camelcase(monkeypatch):
     class CammelCase:
         pass
 
-    @click_test("--a", "cammel-case()")
+    @click_test("--a", "cammel-case()", hierarchical=False)
     def main(a: CammelCase):
         assert isinstance(a, CammelCase)
 
     main(monkeypatch)
 
 
-@click_test("--a", "d1(\"passed\"),d1('passed as, well')")
+@click_test("--a", "d1(\"passed\"),d1('passed as, well')", hierarchical=False)
 def test_list_of_dataclasses(a: List[D1]):
     assert len(a) == 2
     assert isinstance(a[0], D1)
@@ -42,7 +42,7 @@ class D2:
     test: str = "ok"
 
 
-@click_test("--a", "d1(\"passed\"),d2('passed as, well')")
+@click_test("--a", "d1(\"passed\"),d2('passed as, well')", hierarchical=False)
 def test_list_of_union_of_dataclasses(a: List[t.Union[D1, D2]]):
     assert len(a) == 2
     assert isinstance(a[0], D1)
@@ -51,7 +51,7 @@ def test_list_of_union_of_dataclasses(a: List[t.Union[D1, D2]]):
     assert a[1].test == "passed as, well"
 
 
-@click_test("--a", "d1(\"passed\"),d1('passed as, well')")
+@click_test("--a", "d1(\"passed\"),d1('passed as, well')", hierarchical=False)
 def test_list_of_optional_dataclasses(a: List[t.Optional[D1]]):
     assert len(a) == 2
     assert isinstance(a[0], D1)
@@ -60,18 +60,18 @@ def test_list_of_optional_dataclasses(a: List[t.Optional[D1]]):
     assert a[1].test == "passed as, well"
 
 
-@click_test("--a", "d2()")
+@click_test("--a", "d2()", hierarchical=False)
 def test_dataclass_default(a: D2):
     assert isinstance(a, D2)
     assert a.test == "ok"
 
 
-@click_test()
+@click_test(hierarchical=False)
 def test_dataclass_optional(a: Optional[D2] = None):
     assert a is None
 
 
-@click_test("--a", "d2()")
+@click_test("--a", "d2()", hierarchical=False)
 def test_union_of_dataclasses(a: t.Union[D1, D2]):
     assert a is not None
     assert isinstance(a, D2)
@@ -83,7 +83,7 @@ class D3:
     c: t.Union[D2]
 
 
-@click_test("--a", 'd3(c=d2(test="ok"))')
+@click_test("--a", 'd3(c=d2(test="ok"))', hierarchical=False)
 def test_hierarchical_dataclasses(a: D3):
     assert isinstance(a, D3)
     assert isinstance(a.c, D2)
@@ -95,7 +95,7 @@ class D4:
     c: D2
 
 
-@click_test("--a", 'd4(c=d2(test="ok"))')
+@click_test("--a", 'd4(c=d2(test="ok"))', hierarchical=False)
 def test_hierarchical_dataclasses2(a: D4):
     assert isinstance(a, D4)
     assert isinstance(a.c, D2)
@@ -108,7 +108,7 @@ class D5(D2):
         self.c = c
 
 
-@click_test("--a", 'd5("ok2",c=d2(test="ok"))')
+@click_test("--a", 'd5("ok2",c=d2(test="ok"))', hierarchical=False)
 def test_hierarchical_classes(a: D5):
     assert isinstance(a, D5)
     assert isinstance(a.c, D2)

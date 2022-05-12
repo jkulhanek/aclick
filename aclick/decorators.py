@@ -77,7 +77,7 @@ def command(
                          parsing the complex class options are expanded into
                          individual options corresponding to individual
                          properties. Note that some types are not supported
-                         with hierarchical parsing. Default is to use inline
+                         with hierarchical parsing. Default is to use hierarchical
                          parsing.
     :param map_parameter_name: a function that maps from parameter paths
                                (e.g. param1.property1.subproperty2) into

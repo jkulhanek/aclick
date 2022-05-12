@@ -6,9 +6,6 @@ AClick
    :caption: Contents:
 
 
-Introduction
-------------
-
 AClick is a wrapper library around click and provides the :func:`command` and
 :func:`group` decorators as well as :class:`Command` and :class:`Group` classes.
 The decorators will automatically register `aclick` types and if you supply your
@@ -85,11 +82,10 @@ Documentation
    :maxdepth: 2
     
    Introduction <self>
-   quickstart
-   inline-types
+   basic
    hierarchical-parsing
+   inline-types
    parameter-renaming
-   documentation
 
 
 API Reference

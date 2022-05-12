@@ -276,7 +276,7 @@ def test_custom_class(monkeypatch):
             super().__init__(*args, **kwargs)
             self.n_blocks = n_blocks
 
-    @click_test("--model", "model_b(test, n_layers=2)")
+    @click_test("--model", "model_b(test, n_layers=2)", hierarchical=False)
     def main(model: t.Union[ModelA, ModelB]):
         print(
             "Training model "
