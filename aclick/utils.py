@@ -808,6 +808,9 @@ def _build_examples(
 
     def expand_switch_types(class_structure: t.Union[_ClassArgument, _switch_type]):
         def expand_flat(expand, iters):
+            if not isinstance(iters, _switch_type):
+                yield from expand(iters)
+                return
             iters = list(map(expand, iters))
             while iters:
                 for it in iters:
@@ -818,18 +821,15 @@ def _build_examples(
 
         if isinstance(class_structure, _switch_type):
             values = expand_flat(expand_switch_types, class_structure)
-            values = list(values)
             yield from itertools.islice(values, limit)
             return
         elif isinstance(class_structure, _ClassArgument):
-            args_to_expand = list(
-                x for x in chain(class_structure.args, class_structure.kwargs.values())
-            )
+            args_to_expand = list(chain(class_structure.args, class_structure.kwargs.values()))
             if not args_to_expand:
                 yield class_structure
                 return
             values = itertools.product(
-                *[expand_flat(expand_switch_types, args_to_expand)]
+                *(expand_flat(expand_switch_types, x) for x in args_to_expand)
             )
             values = itertools.islice(values, limit)
             for val_set in values:
@@ -837,9 +837,9 @@ def _build_examples(
                 new_args = list(class_structure.args)
                 new_kwargs = OrderedDict(class_structure.kwargs)
                 for i, switch_tp in enumerate(class_structure.args):
-                    new_args[i] = next(val_set_iterator)
+                    new_args[i] = next(val_set_iterator, None)
                 for k, switch_tp in class_structure.kwargs.items():
-                    new_kwargs[k] = next(val_set_iterator)
+                    new_kwargs[k] = next(val_set_iterator, None)
                 yield _ClassArgument(class_structure.name, new_args, new_kwargs)
         else:
             yield class_structure
@@ -850,16 +850,19 @@ def _build_examples(
 
 
 def build_examples(
-    class_type: t.Type, limit: int = None, *, use_dashes: bool = False
+    class_type: t.Type, limit: int = None, *, use_dashes: bool = False, indent: int = 2
 ) -> t.List[str]:
     examples = _build_examples(class_type, limit, use_dashes=use_dashes)
 
-    def to_str(example):
+    def _to_str(example, offset=0):
         if isinstance(example, _ClassArgument):
-            return str(example)
-        return str(example)
-
-    return list(map(to_str, examples))
+            return ((' ' * offset) + example.name + '(' + ('\n' if example.args or example.kwargs else '') +
+                ',\n'.join(itertools.chain(
+                    (_to_str(x, offset + indent) for x in example.args),
+                    ((' ' * (offset + indent)) + f'{k}={_to_str(v, offset + indent).lstrip(" ")}' for k, v in example.kwargs.items()))
+                ) + ')')
+        return (' ' * offset) + str(example)
+    return list(map(_to_str, examples))
 
 
 def _parse_class_structure_for_all_descendents(

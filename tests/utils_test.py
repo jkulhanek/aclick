@@ -356,17 +356,17 @@ def test_build_examples():
         x: t.Union[A, B, C]
 
     _s = aclick.utils._ClassArgument._escaped_str
-    examples = aclick.utils.build_examples(A)
+    examples = aclick.utils._build_examples(A)
     assert examples == [aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))]
 
-    examples = aclick.utils.build_examples(t.Union[A, B, C])
+    examples = aclick.utils._build_examples(t.Union[A, B, C])
     assert examples == [
         aclick.utils._ClassArgument("a", [], dict(a=_s("{str}"))),
         aclick.utils._ClassArgument("b", [], dict(b=_s("{int}"))),
         aclick.utils._ClassArgument("c", [], dict()),
     ]
 
-    examples = aclick.utils.build_examples(D)
+    examples = aclick.utils._build_examples(D)
 
     def mkcls(inside):
         return aclick.utils._ClassArgument("d", [], dict(x=inside))
@@ -377,7 +377,7 @@ def test_build_examples():
         mkcls(aclick.utils._ClassArgument("c", [], dict())),
     ]
 
-    examples = aclick.utils.build_examples(t.Union[D, C])
+    examples = aclick.utils._build_examples(t.Union[D, C])
 
     def mkcls(inside):
         return aclick.utils._ClassArgument("d", [], dict(x=inside))
@@ -389,7 +389,7 @@ def test_build_examples():
         mkcls(aclick.utils._ClassArgument("c", [], dict())),
     ]
 
-    examples = aclick.utils.build_examples(t.Union[D, C], 2)
+    examples = aclick.utils._build_examples(t.Union[D, C], 2)
 
     def mkcls(inside):
         return aclick.utils._ClassArgument("d", [], dict(x=inside))
