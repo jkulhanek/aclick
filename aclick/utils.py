@@ -1,6 +1,7 @@
 import builtins
 import dataclasses
 import inspect
+import itertools
 import re
 import types
 import typing as t
@@ -341,6 +342,8 @@ def parse_class_structure(
             class_type = known_classes[class_argument.name]
             signature = _full_signature(class_type)
             args_types, kwargs_types = _get_signature_args_kwargs(signature)
+            args_types = [(p.name, p.annotation) for p in args_types]
+            kwargs_types = OrderedDict((p.name, p.annotation) for p in kwargs_types)
             num_pos_args_required = sum(
                 1
                 for p in signature.parameters.values()
@@ -531,10 +534,50 @@ def _full_signature(fn: t.Callable) -> SignatureWithDescription:
 
 
 class _ClassArgument:
+    class _escaped_str:
+        def __init__(self, value):
+            self._value = value
+
+        def __str__(self):
+            return self._value
+
+        def __repr__(self):
+            return self._value
+
+        def __eq__(self, other):
+            return (
+                isinstance(other, _ClassArgument._escaped_str)
+                and self._value == other._value
+            )
+
+        def __hash__(self):
+            return hash(self._value)
+
     def __init__(self, name, args, kwargs):
         self.name = name
         self.args = args
         self.kwargs = kwargs
+
+    def __eq__(self, other):
+        if not isinstance(other, _ClassArgument):
+            return False
+        return (
+            self.name == other.name
+            and len(self.args) == len(other.args)
+            and all(x == y for x, y in zip(self.args, other.args))
+            and len(self.kwargs) == len(other.kwargs)
+            and all(v == other.kwargs[k] for k, v in self.kwargs.items())
+        )
+
+    def __hash__(self):
+        kwargs = (
+            self.kwargs.items()
+            if isinstance(self.kwargs, OrderedDict)
+            else sorted(self.kwargs.items(), key=lambda x: x[0])
+        )
+        return hash(
+            (self.name,) + tuple(map(hash, self.args)) + tuple(map(hash, kwargs))
+        )
 
     def __repr__(self):
         args = [
@@ -700,15 +743,123 @@ class _ClassArgument:
         return _ClassArgument.parse_argument(string)[-1]
 
 
-def build_examples(class_type: t.Type, limit: int = -1) -> t.List[t.Any]:
-    examples = []
-    types = [class_type]
-    if getattr(class_type, '__origin__', None) is t.Union:
-        types = [x for x in getattr(class_type, '__args__') if x not in (type(None),)]
+def _build_examples(
+    class_type: t.Type, limit: int = None, use_dashes: bool = False
+) -> t.Any:
+    class _switch_type(list):
+        pass
 
-    n_child_types = max(1, limit // len(types))
-    for t in types:
-        sub_examples = build_examples(t)
+    def inner(
+        cls, ignore_from_str=True, use_dashes=False, is_optional=False
+    ) -> t.Union[_ClassArgument, str, _switch_type, _ClassArgument._escaped_str]:
+        if not ignore_from_str and hasattr(cls, "from_str"):
+            return _ClassArgument._escaped_str(
+                ("{optional " if is_optional else "{")
+                + f"{cls.__name__} instance"
+                + "}"
+            )
+        elif cls in (type(None),):
+            return _ClassArgument._escaped_str("None")
+        elif getattr(cls, "__origin__", None) is t.Union:
+            return _switch_type(
+                inner(
+                    x,
+                    ignore_from_str=ignore_from_str,
+                    use_dashes=use_dashes,
+                    is_optional=is_optional,
+                )
+                for x in cls.__args__
+            )
+        elif inspect.isclass(cls) and issubclass(cls, (bool, float, int, bytes, str)):
+            typename = next(
+                x.__name__ for x in (bool, float, int, bytes, str) if issubclass(cls, x)
+            )
+            return _ClassArgument._escaped_str(
+                ("{optional " if is_optional else "{") + f"{typename}" + "}"
+            )
+        elif _is_class(cls):
+            class_name = get_class_name(cls)
+            args_par, kwargs_par = _get_signature_args_kwargs(cls, exclusive=True)
+            args = []
+            kwargs = OrderedDict()
+            for p in args_par:
+                is_optional = p.default is not inspect._empty
+                args.append(
+                    inner(
+                        p.annotation,
+                        False,
+                        use_dashes=use_dashes,
+                        is_optional=is_optional,
+                    )
+                )
+            for p in kwargs_par:
+                name = p.name
+                if use_dashes:
+                    name = name.replace("_", "-")
+                is_optional = p.default is not inspect._empty
+                kwargs[name] = inner(
+                    p.annotation, False, use_dashes=use_dashes, is_optional=is_optional
+                )
+            if use_dashes:
+                class_name = class_name.replace("_", "-")
+            return _ClassArgument(name=class_name, args=args, kwargs=kwargs)
+        else:
+            raise RuntimeError(f"Type {type(cls)} is not supported")
+
+    def expand_switch_types(class_structure: t.Union[_ClassArgument, _switch_type]):
+        def expand_flat(expand, iters):
+            iters = list(map(expand, iters))
+            while iters:
+                for it in iters:
+                    try:
+                        yield next(it)
+                    except StopIteration:
+                        iters.remove(it)
+
+        if isinstance(class_structure, _switch_type):
+            values = expand_flat(expand_switch_types, class_structure)
+            values = list(values)
+            yield from itertools.islice(values, limit)
+            return
+        elif isinstance(class_structure, _ClassArgument):
+            args_to_expand = list(
+                x for x in chain(class_structure.args, class_structure.kwargs.values())
+            )
+            if not args_to_expand:
+                yield class_structure
+                return
+            values = itertools.product(
+                *[expand_flat(expand_switch_types, args_to_expand)]
+            )
+            values = itertools.islice(values, limit)
+            for val_set in values:
+                val_set_iterator = iter(val_set)
+                new_args = list(class_structure.args)
+                new_kwargs = OrderedDict(class_structure.kwargs)
+                for i, switch_tp in enumerate(class_structure.args):
+                    new_args[i] = next(val_set_iterator)
+                for k, switch_tp in class_structure.kwargs.items():
+                    new_kwargs[k] = next(val_set_iterator)
+                yield _ClassArgument(class_structure.name, new_args, new_kwargs)
+        else:
+            yield class_structure
+            return
+
+    class_structure = inner(class_type, ignore_from_str=True, use_dashes=use_dashes)
+    return list(expand_switch_types(class_structure))
+
+
+def build_examples(
+    class_type: t.Type, limit: int = None, *, use_dashes: bool = False
+) -> t.List[str]:
+    examples = _build_examples(class_type, limit, use_dashes=use_dashes)
+
+    def to_str(example):
+        if isinstance(example, _ClassArgument):
+            return str(example)
+        return str(example)
+
+    return list(map(to_str, examples))
 
 
 def _parse_class_structure_for_all_descendents(
@@ -764,7 +915,8 @@ def _validate_class_supports_to_str(cls):
             # but they must set all constructor parameters as properties
             # this is verified on runtime
             args_types, kwargs_types = _get_signature_args_kwargs(cls, exclusive=True)
-            for p_name, p_type in chain(args_types, kwargs_types.items()):
+            for p in chain(args_types, kwargs_types):
+                p_name, p_type = p.name, p.annotation
                 if p_type is inspect._empty:
                     raise ValueError(
                         f"Class {original_cls} is not supported because field {p_name} in {cls} does not have a type annotation"
@@ -833,14 +985,16 @@ def _class_to_str_with_dashes_option(self, use_dashes=False) -> str:
             args_par, kwargs_par = _get_signature_args_kwargs(type(obj), exclusive=True)
             args = []
             kwargs = {}
-            for p_name, _ in args_par:
+            for p in args_par:
+                p_name = p.name
                 if not hasattr(obj, p_name):
                     raise RuntimeError(
                         f"Cannot serialize class {type(obj)}, because the constructor parameter {p_name} is missing from class's properties"
                     )
                 value = getattr(obj, p_name)
                 args.append(inner(value, False, use_dashes=use_dashes))
-            for name, p in kwargs_par.items():
+            for p in kwargs_par:
+                name = p.name
                 if not hasattr(obj, name):
                     raise RuntimeError(
                         f"Cannot serialize class {type(obj)}, because the constructor parameter {name} is missing from class's properties"
@@ -921,7 +1075,7 @@ def _get_signature_args_kwargs(signature, exclusive=False):
         signature = _full_signature(signature)
     signature = list(signature.parameters.values())
     args = [
-        (p.name, p.annotation)
+        p
         for p in signature
         if p.kind
         in (
@@ -935,12 +1089,12 @@ def _get_signature_args_kwargs(signature, exclusive=False):
             }
         )
     ]
-    kwargs = OrderedDict(
-        (p.name, p.annotation)
+    kwargs = [
+        p
         for p in signature
         if p.kind
         in {inspect.Parameter.KEYWORD_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
-    )
+    ]
     return args, kwargs
 
 
