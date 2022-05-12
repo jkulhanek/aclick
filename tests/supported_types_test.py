@@ -17,11 +17,11 @@ class B:
 @pytest.mark.parametrize(
     "tp",
     [
-        # str,
-        # int,
-        # float,
-        # bool,
-        # type(None)
+        str,
+        int,
+        float,
+        bool,
+        type(None),
         t.Union[A, B]
     ],
 )

@@ -302,6 +302,12 @@ def default_from_str(cls=None):
     return decorator
 
 
+class ParseClassStructureError(RuntimeError):
+    """
+    Exception raised when parsing expression as a class.
+    """
+
+
 def parse_class_structure(
     value: str,
     classes: t.List[t.Type],
@@ -336,7 +342,7 @@ def parse_class_structure(
         elif isinstance(class_argument, _ClassArgument):
             known_classes = class_map if is_root else known_classes_map
             if class_argument.name not in known_classes:
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f'Could not find class with name "{class_argument.name}" in the list of registered classes: {", ".join(sorted(known_classes.keys()))}'
                 )
             class_type = known_classes[class_argument.name]
@@ -361,18 +367,18 @@ def parse_class_structure(
                 and p.default is inspect._empty
             }
             if len(class_argument.args) > len(args_types):
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"Number of passed positional arguments ({len(class_argument.args)}) to class {class_argument.name} exceeds the number of allowed arguments ({len(args_types)})."
                 )
             elif len(class_argument.args) < num_pos_args_required:
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"Number of passed positional arguments ({len(class_argument.args)}) to class {class_argument.name} is lower then the number of expected arguments ({num_pos_args_required})."
                 )
             unknown_keys = set(class_argument.kwargs.keys()).difference(
                 set(kwargs_types.keys())
             )
             if unknown_keys:
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"There were unknown parameters {{{', '.join(sorted(unknown_keys))}}} to class {class_argument.name}. Allowed parameters are: {{{', '.join(sorted(kwargs_types.keys()))}}}"
                 )
             missing_keys = required_keys.difference(class_argument.kwargs.keys())
@@ -380,7 +386,7 @@ def parse_class_structure(
                 x for x, _ in args_types[: len(class_argument.args)]
             )
             if missing_keys:
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f'Parameters {{{", ".join(sorted(missing_keys))}}} to class {class_argument.name} are missing. Passed arguments are: {{{", ".join(sorted(class_argument.kwargs.keys()))}}}.'
                 )
             args = [
@@ -412,13 +418,13 @@ def parse_class_structure(
         if getattr(value_type, "__origin__", None) in (Literal,):
             class_argument = _map_class(class_argument, str, is_root=False)
             if class_argument not in value_type.__args__:
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"Literal value {class_argument} is not in the set of supported values {{{', '.join(sorted(value_type.__args__))}}}"
                 )
             value_type = str
         if getattr(value_type, "__origin__", None) in (tuple,):
             if len(class_argument) != len(value_type.__args__):
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"Cannot parse {len(class_argument)} values as tuple of length {len(value_type.__args__)}"
                 )
             class_argument = [
@@ -429,7 +435,7 @@ def parse_class_structure(
 
         if getattr(value_type, "__origin__", None) in (dict, OrderedDict):
             if not isinstance(class_argument, OrderedDict):
-                raise RuntimeError(
+                raise ParseClassStructureError(
                     f"Cannot parse {class_argument} as a {value_type.__origin__.__name__} instance"
                 )
             class_argument = [
@@ -443,7 +449,7 @@ def parse_class_structure(
 
         if value_type == bool:
             if not isinstance(class_argument, str):
-                raise RuntimeError(f"Cannot parse {class_argument} as bool")
+                raise ParseClassStructureError(f"Cannot parse {class_argument} as bool")
 
             norm = class_argument.strip().lower()
             if norm in {"1", "true", "t", "yes", "y", "on"}:
@@ -452,13 +458,66 @@ def parse_class_structure(
             if norm in {"0", "false", "f", "no", "n", "off"}:
                 return False
 
-            raise RuntimeError(f"Cannot parse {class_argument} as bool")
+            raise ParseClassStructureError(f"Cannot parse {class_argument} as bool")
         return value_type(class_argument)
 
     assert isinstance(value, str)
-    class_tree = _ClassArgument.from_str(value)
+    try:
+        class_tree = _ClassArgument.from_str(value)
+    except _ClassArgument.ParseError as e:
+        raise ParseClassStructureError(
+            "Cannot parse string as a class representation. " + str(e)
+        ) from e
     value = _map_class(class_tree, None)
     return value
+
+
+def build_examples(
+    class_type: t.Type,
+    limit: t.Optional[int] = None,
+    *,
+    use_dashes: bool = False,
+    indent: int = 2,
+) -> t.List[str]:
+    """
+    Generates a list of example strings representing each different instance of the
+    type ``class_type``. Unions are expanded into individual types and if there
+    are more properties with an union type, the list will contain all possible
+    combinations of types of all properties.
+    The different types are expanded using breadth first search, i.e., lower
+    levels are expanded first.
+    The number of returned examples can be limited using the ``limit`` argument.
+
+    :param class_type: Type to expand and construct examples.
+    :param limit: Number of returned examples. By default all examples are returned.
+    :param use_dashes: Use dashes in class names and properties (default False).
+    :param indent: How many spaces to use to increase the indent with each level (default 2).
+    """
+
+    examples = _build_examples(class_type, limit, use_dashes=use_dashes)
+
+    def _to_str(example, offset=0):
+        if isinstance(example, _ClassArgument):
+            return (
+                (" " * offset)
+                + example.name
+                + "("
+                + ("\n" if example.args or example.kwargs else "")
+                + ",\n".join(
+                    itertools.chain(
+                        (_to_str(x, offset + indent) for x in example.args),
+                        (
+                            (" " * (offset + indent))
+                            + f'{k}={_to_str(v, offset + indent).lstrip(" ")}'
+                            for k, v in example.kwargs.items()
+                        ),
+                    )
+                )
+                + ")"
+            )
+        return (" " * offset) + str(example)
+
+    return list(map(_to_str, examples))
 
 
 TSignature = t.TypeVar("TSignature", bound=inspect.Signature)
@@ -744,7 +803,7 @@ class _ClassArgument:
 
 
 def _build_examples(
-    class_type: t.Type, limit: int = None, use_dashes: bool = False
+    class_type: t.Type, limit: t.Optional[int] = None, use_dashes: bool = False
 ) -> t.Any:
     class _switch_type(list):
         pass
@@ -806,7 +865,7 @@ def _build_examples(
         else:
             raise RuntimeError(f"Type {type(cls)} is not supported")
 
-    def expand_switch_types(class_structure: t.Union[_ClassArgument, _switch_type]):
+    def expand_switch_types(class_structure):
         def expand_flat(expand, iters):
             if not isinstance(iters, _switch_type):
                 yield from expand(iters)
@@ -824,7 +883,9 @@ def _build_examples(
             yield from itertools.islice(values, limit)
             return
         elif isinstance(class_structure, _ClassArgument):
-            args_to_expand = list(chain(class_structure.args, class_structure.kwargs.values()))
+            args_to_expand = list(
+                chain(class_structure.args, class_structure.kwargs.values())
+            )
             if not args_to_expand:
                 yield class_structure
                 return
@@ -847,22 +908,6 @@ def _build_examples(
 
     class_structure = inner(class_type, ignore_from_str=True, use_dashes=use_dashes)
     return list(expand_switch_types(class_structure))
-
-
-def build_examples(
-    class_type: t.Type, limit: int = None, *, use_dashes: bool = False, indent: int = 2
-) -> t.List[str]:
-    examples = _build_examples(class_type, limit, use_dashes=use_dashes)
-
-    def _to_str(example, offset=0):
-        if isinstance(example, _ClassArgument):
-            return ((' ' * offset) + example.name + '(' + ('\n' if example.args or example.kwargs else '') +
-                ',\n'.join(itertools.chain(
-                    (_to_str(x, offset + indent) for x in example.args),
-                    ((' ' * (offset + indent)) + f'{k}={_to_str(v, offset + indent).lstrip(" ")}' for k, v in example.kwargs.items()))
-                ) + ')')
-        return (' ' * offset) + str(example)
-    return list(map(_to_str, examples))
 
 
 def _parse_class_structure_for_all_descendents(
