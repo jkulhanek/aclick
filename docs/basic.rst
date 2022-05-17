@@ -1,11 +1,12 @@
-Quickstart
-==========
+Getting started
+===============
 
 .. currentmodule:: aclick
 
 Install AClick from PyPI by running::
 
     pip install aclick
+    
 
 
 From Click to AClick
@@ -81,6 +82,36 @@ And the corresponding help page:
     invoke(hello, args=['--help'], prog_name='python hello.py')
 
 
+Supported types
+---------------
+
+By default, ``aclick`` supports the following types:
+
+* str, bool, int, float
+
+* Optional, List, Tuple
+
+* Custom classes and dataclasses using :doc:`inline parsing <inline-types>` or :doc:`hierarchical parsing <hierarchical-parsing>`
+
+In :doc:`hierarchical parsing <hierarchical-parsing>`, there are some restrictions on supported types. Please
+refer to :doc:`hierarchical parsing section <hierarchical-parsing>`.
+
+Arguments and options
+---------------------
+
+All positional arguments are expanded as Click's arguments and keyword arguments
+are expanded as options. In the following example, ``name`` will become an argument
+and age will became an option.
+
+.. click:example::
+
+   @aclick.command()
+   def hello(name: str, /, age: int = 18):
+       click.echo(f'Hello {name} with age {age}!')
+
+.. click:run::
+
+    invoke(hello, args=['--help'], prog_name='python hello.py')
 
 Command groups
 --------------

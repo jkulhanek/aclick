@@ -19,6 +19,12 @@ def test_dataclass(a: D1):
     assert a.test == "passed"
 
 
+@click_test("--a-test", "passed")
+def test_hierarchical_is_default(a: D1):
+    assert isinstance(a, D1)
+    assert a.test == "passed"
+
+
 def test_dataclass_no_default_error():
     with pytest.raises(ValueError) as exinfo:
 
