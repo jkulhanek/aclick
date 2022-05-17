@@ -337,3 +337,92 @@ def test_parse_str_on_class_descendents():
         x = B.from_str("b(x=ok, y=pass)")
 
     assert "method from_str should be called on" in str(excinfo.value).lower()
+
+
+def test_build_examples():
+    @dataclass
+    class A:
+        a: str
+
+    @dataclass
+    class B:
+        b: int
+
+    class C:
+        pass
+
+    @dataclass
+    class D:
+        x: t.Union[A, B, C]
+
+    _s = aclick.utils._ClassArgument._escaped_str
+    examples = aclick.utils._build_examples(A)
+    assert examples == [aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))]
+
+    examples = aclick.utils._build_examples(t.Union[A, B, C])
+    assert examples == [
+        aclick.utils._ClassArgument("a", [], dict(a=_s("{str}"))),
+        aclick.utils._ClassArgument("b", [], dict(b=_s("{int}"))),
+        aclick.utils._ClassArgument("c", [], dict()),
+    ]
+
+    examples = aclick.utils._build_examples(D)
+
+    def mkcls(inside):
+        return aclick.utils._ClassArgument("d", [], dict(x=inside))
+
+    assert examples == [
+        mkcls(aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))),
+        mkcls(aclick.utils._ClassArgument("b", [], dict(b=_s("{int}")))),
+        mkcls(aclick.utils._ClassArgument("c", [], dict())),
+    ]
+
+    examples = aclick.utils._build_examples(t.Union[D, C])
+
+    def mkcls(inside):
+        return aclick.utils._ClassArgument("d", [], dict(x=inside))
+
+    assert examples == [
+        mkcls(aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))),
+        aclick.utils._ClassArgument("c", [], dict()),
+        mkcls(aclick.utils._ClassArgument("b", [], dict(b=_s("{int}")))),
+        mkcls(aclick.utils._ClassArgument("c", [], dict())),
+    ]
+
+    examples = aclick.utils._build_examples(t.Union[D, C], 2)
+
+    def mkcls(inside):
+        return aclick.utils._ClassArgument("d", [], dict(x=inside))
+
+    assert examples == [
+        mkcls(aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))),
+        aclick.utils._ClassArgument("c", [], dict()),
+    ]
+
+    examples = aclick.utils._build_examples(t.List[A])
+    assert examples == [
+        (aclick.utils._ClassArgument("a", [], dict(a=_s("{str}"))),
+         aclick.utils._ClassArgument._escaped_str('...')),
+    ]
+
+    examples = aclick.utils._build_examples(t.Tuple[A, B])
+    assert examples == [
+        (aclick.utils._ClassArgument("a", [], dict(a=_s("{str}"))),
+         aclick.utils._ClassArgument("b", [], dict(b=_s("{int}"))))
+    ]
+
+    examples = aclick.utils._build_examples(t.OrderedDict[str, A])
+    assert examples == [
+        OrderedDict([
+            ('{str}', aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))),
+            (None, aclick.utils._ClassArgument._escaped_str('...')),
+        ])
+    ]
+
+    examples = aclick.utils._build_examples(t.Dict[str, A])
+    assert examples == [
+        OrderedDict([
+            ('{str}', aclick.utils._ClassArgument("a", [], dict(a=_s("{str}")))),
+            (None, aclick.utils._ClassArgument._escaped_str('...')),
+        ])
+    ]

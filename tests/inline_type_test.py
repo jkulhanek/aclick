@@ -2,7 +2,7 @@ import typing as t
 from dataclasses import dataclass
 from typing import List, Optional
 
-from ._common import click_test  # noqa: F401
+from ._common import click_test, click_test_error  # noqa: F401
 
 
 @dataclass
@@ -114,3 +114,55 @@ def test_hierarchical_classes(a: D5):
     assert isinstance(a.c, D2)
     assert a.c.test == "ok"
     assert a.test == "ok2"
+
+
+@click_test_error('--a', 'dd()', hierarchical=False)
+def test_error_message_contains_example(err, a: D5):
+    status, msg = err
+    assert status != 0
+    assert '''d5(
+  test={optional str},
+  c=d2(
+    test={optional str}))''' in msg.lower()
+
+
+def test_parameter_help_contains_example(monkeypatch):
+    @click_test_error('--help', '--a', 'dd()', hierarchical=False)
+    def main(err, a: D5):
+        status, msg = err
+        assert status == 0
+        assert '''d5(test={optionalstr},c=d2(test={optionalstr}))''' not in msg.lower().replace(' ', '').replace('\n', '')
+
+    main(monkeypatch)
+
+    @click_test_error('--help', '--a', 'dd()', num_inline_examples_help=-1, hierarchical=False)
+    def main(err, a: D5):
+        status, msg = err
+        assert status == 0
+        assert '''d5(test={optionalstr},c=d2(test={optionalstr}))''' in msg.lower().replace(' ', '').replace('\n', '')
+
+    main(monkeypatch)
+
+    @click_test_error('--help', '--a', 'dd()', hierarchical=False)
+    def main(err, a: t.Union[D5, D2]):
+        status, msg = err
+        assert status == 0
+        assert '''d5(test={optionalstr},c=d2(test={optionalstr}))''' not in msg.lower().replace(' ', '').replace('\n', '')
+
+    main(monkeypatch)
+
+    @click_test_error('--help', '--a', 'dd()', num_inline_examples_help=-1, hierarchical=False)
+    def main(err, a: t.Union[D5, D2]):
+        status, msg = err
+        assert status == 0
+        assert '''d5(test={optionalstr},c=d2(test={optionalstr}))''' in msg.lower().replace(' ', '').replace('\n', '')
+
+    main(monkeypatch)
+
+    @click_test_error('--help', '--a', 'dd()', num_inline_examples_help=1, hierarchical=False)
+    def main(err, a: t.Union[D2, D5]):
+        status, msg = err
+        assert status == 0
+        assert '''d5(test={optionalstr},c=d2(test={optionalstr}))''' not in msg.lower().replace(' ', '').replace('\n', '')
+
+    main(monkeypatch)

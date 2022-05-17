@@ -3,11 +3,12 @@ import inspect
 import re
 import typing as t
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass, field
+from .types import _AClickContext
 
 import click as _click
 
 from .types import ClassUnion, List, Tuple
+from .types import ParameterGroup, OptionalTypeHierarchicalOption, UnionTypeHierarchicalOption, ClassHierarchicalOption
 from .utils import (
     _full_signature,
     _get_help_text,
@@ -17,6 +18,7 @@ from .utils import (
     Literal,
     ParameterWithDescription,
     SignatureWithDescription,
+    build_examples
 )
 
 
@@ -38,63 +40,6 @@ class ParameterRenamer(metaclass=ABCMeta):
         :return: The new name of the parameter.
         """
         raise NotImplementedError()  # pragma: no cover
-
-
-class ParameterGroup:
-    def __init__(self, full_name: t.Optional[str]):
-        self.full_name = full_name
-        self.name = full_name.replace(".", "_") if full_name is not None else None
-
-    def assert_is_supported(self, command: "Command") -> "ParameterGroup":
-        return self  # pragma: no cover
-
-    def get_params(
-        self, ctx: _click.Context
-    ) -> t.Iterable[t.Union["ParameterGroup", _click.Parameter]]:
-        return []  # pragma: no cover
-
-    def handle_parse_group_result(self, ctx: _click.Context):
-        pass  # pragma: no cover
-
-    def _handle_parse_group_result_for_class(self, cls: t.Type, ctx: _click.Context):
-        assert isinstance(ctx.command, Command)
-        local_params = dict()
-        for param in _full_signature(cls).parameters.values():
-            param_name = f"{self.full_name}.{param.name}"
-            click_param = ctx.command.build_click_parameter(param_name, param)
-            if click_param is not None and click_param.name is not None:
-                local_params[param.name] = ctx.params.pop(click_param.name)
-        return _wrap_fn_to_allow_kwargs_instead_of_args(cls)(**local_params)
-
-    def _get_params_for_class(self, cls: t.Type, ctx: _click.Context):
-        assert isinstance(ctx.command, Command)
-        for param in _full_signature(cls).parameters.values():
-            param_name = f"{self.full_name}.{param.name}"
-            click_param = ctx.command.build_click_parameter(param_name, param)
-            if click_param is not None:
-                yield click_param
-
-    def _get_or_store_first_value(
-        self, ctx: _click.Context, value: t.Any = inspect._empty
-    ):
-        assert self.name is not None
-        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
-        if self.name in param_groups:
-            return param_groups[self.name]
-        elif value is not inspect._empty:
-            param_groups[self.name] = value
-            return value
-
-    def _get_first_value(self, ctx: _click.Context):
-        assert self.name is not None
-        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
-        return param_groups[self.name]
-
-
-@dataclass
-class _AClickContext:
-    param_groups: t.List[ParameterGroup] = field(default_factory=list)
-    param_group_contexts: t.Dict[str, t.Any] = field(default_factory=dict)
 
 
 class Command(_click.Command):
@@ -135,6 +80,12 @@ class Command(_click.Command):
                        The callback's docstring is parsed if no help is passed.
     :param show_defaults: whether to show defaults for all parameters.
                           Default is ``True``.
+    :param use_dashes: use dashes instead of underscores in parameter and class
+                       names. Default is ``True``.
+    :param num_inline_examples_help: limits the number of examples to show in
+                                     help for each inline type argument. If the
+                                     value is -1, all possible values are shown.
+                                     Default is 0.
     :param add_help_option: by default each command registers a ``--help``
                             option.  This can be disabled by this parameter.
     :param no_args_is_help: this controls what happens if no arguments are
@@ -153,8 +104,11 @@ class Command(_click.Command):
         hierarchical: bool = True,
         map_parameter_name: t.Optional[ParameterRenamer] = None,
         show_defaults: t.Optional[bool] = True,
+        use_dashes: bool = True,
+        num_inline_examples_help: int = 0,
         **kwargs,
     ):
+        assert num_inline_examples_help >= -1
         super().__init__(*args, **kwargs)
         if signature is None:
             if self.callback is None:
@@ -165,6 +119,8 @@ class Command(_click.Command):
         self.hierarchical = hierarchical
         self.map_parameter_name = map_parameter_name
         self.show_defaults = show_defaults
+        self.use_dashes = use_dashes
+        self.num_inline_examples_help = num_inline_examples_help
         self._assert_signature_is_supported(self.callback_signature)
         if (self.help is None or self.short_help is None) and isinstance(
             signature, SignatureWithDescription
@@ -174,6 +130,12 @@ class Command(_click.Command):
                 self.short_help if self.short_help is not None else short_help
             )
             self.help = self.help if self.help is not None else help
+
+    def make_context(self, *args, **kwargs):
+        ctx = super().make_context(*args, **kwargs)
+        aclick_ctx = ctx.ensure_object(_AClickContext)
+        aclick_ctx.use_dashes = self.use_dashes
+        return ctx
 
     def build_click_parameter(
         self,
@@ -299,6 +261,13 @@ class Command(_click.Command):
             )
 
         if _is_class(parameter_type):
+            if self.num_inline_examples_help != 0:
+                # Add help for inline examples
+                if 'help' not in kwargs or not kwargs['help']:
+                    kwargs['help'] = ''
+                if kwargs['help']:
+                    kwargs['help'] += '\n\n'
+                kwargs['help'] += '\b\n' + _build_inline_class_union_help([parameter_type], self.use_dashes, self.num_inline_examples_help).replace('\n\n', '\n\n\b\n') + '\n\n'
             kwargs["type"] = ClassUnion([parameter_type])
             return cls(option_name, **kwargs)
 
@@ -321,6 +290,13 @@ class Command(_click.Command):
                 )
 
             types = [x for x in parameter_type.__args__ if _is_class(x)]
+            if self.num_inline_examples_help != 0:
+                # Add help for inline examples
+                if 'help' not in kwargs or not kwargs['help']:
+                    kwargs['help'] = ''
+                if kwargs['help']:
+                    kwargs['help'] += '\n\n'
+                kwargs['help'] += '\b\n' + _build_inline_class_union_help(types, self.use_dashes, self.num_inline_examples_help).replace('\n\n', '\n\n\b\n') + '\n\n'
             kwargs["type"] = ClassUnion(types)
             return cls(option_name, **kwargs)
 
@@ -613,179 +589,11 @@ def _is_optional(tp):
     )
 
 
-class ClassHierarchicalOption(ParameterGroup):
-    def __init__(self, name: str, type: t.Type):
-        super().__init__(name)
-        self.class_type = type
-
-    def assert_is_supported(self, command: Command) -> "ClassHierarchicalOption":
-        assert self.full_name is not None
-        command._assert_signature_is_supported(
-            _full_signature(self.class_type), self.full_name + "."
-        )
-        return self
-
-    def get_params(self, ctx: _click.Context):
-        return self._get_params_for_class(self.class_type, ctx)
-
-    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
-        assert isinstance(ctx.command, Command)
-        assert self.name is not None
-
-        ctx.params[self.name] = self._handle_parse_group_result_for_class(
-            self.class_type, ctx
-        )
-
-
-class UnionTypeHierarchicalOption(_click.Option, ParameterGroup):
-    def __init__(
-        self,
-        parameter_name: str,
-        name: str,
-        classes: t.List[t.Type],
-        required: bool = False,
-        get_class_name: t.Optional[t.Callable[[t.Type], str]] = None,
-    ):
-        ParameterGroup.__init__(self, name)
-        self.classes = classes
-        self.get_class_name = get_class_name or _get_class_name
-        self._init_click_option(parameter_name, name, type, required)
-
-    def assert_is_supported(self, command: Command) -> "UnionTypeHierarchicalOption":
-        assert self.full_name is not None
-        for c in self.classes:
-            command._assert_signature_is_supported(
-                _full_signature(c), self.full_name + "."
-            )
-        return self
-
-    def _init_click_option(self, parameter_name, name, type, required):
-        opt_name = [f"--{parameter_name}", name.replace(".", "_")]
-
-        if required:
-            kwargs: t.Dict[str, t.Any] = dict(required=True)
-        else:
-            kwargs = dict(default=None)
-        _click.Option.__init__(
-            self,
-            opt_name,
-            is_eager=True,
-            type=_click.types.Choice(
-                [self.get_class_name(x) for x in self.classes], case_sensitive=False
-            ),
-            help=f"Set {name} to a {self.get_class_name(type)} instance",
-            **kwargs,
-        )
-
-    def get_params(self, ctx: _click.Context):
-        assert isinstance(ctx.command, Command)
-        assert isinstance(self.name, str)
-
-        current_value = self._get_or_store_first_value(
-            ctx, ctx.params.get(self.name, inspect._empty)
-        )
-        if current_value is not None:
-            assert isinstance(current_value, str)
-            class_map = {self.get_class_name(x): x for x in self.classes}
-
-            if current_value not in class_map:
-                supported_classes_names = ", ".join(
-                    sorted(map(self.get_class_name, self.classes))
-                )
-                raise _click.ClickException(
-                    f'Class with name "{current_value}" was not found in the set of supported classes {{{supported_classes_names}}}'
-                )
-            assert current_value in class_map
-            class_type = class_map[current_value]
-            return self._get_params_for_class(class_type, ctx)
-        return []
-
-    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
-        assert isinstance(ctx.command, Command)
-        assert isinstance(self.name, str)
-
-        ctx.params.pop(self.name)
-        control_parameter_value = self._get_first_value(ctx)
-        if control_parameter_value is not None:
-            assert isinstance(control_parameter_value, str)
-            class_map = {self.get_class_name(x): x for x in self.classes}
-            assert control_parameter_value in class_map
-            class_type = class_map[control_parameter_value]
-            ctx.params[self.name] = self._handle_parse_group_result_for_class(
-                class_type, ctx
-            )
-
-
-class OptionalTypeHierarchicalOption(_click.Option, ParameterGroup):
-    def __init__(
-        self,
-        parameter_name: str,
-        name: str,
-        type: t.Type,
-        required: bool = False,
-        get_class_name: t.Optional[t.Callable[[t.Type], str]] = None,
-    ):
-        ParameterGroup.__init__(self, name)
-        self.optional_type = type
-        self.get_class_name = get_class_name or _get_class_name
-        self._init_click_option(parameter_name, name, type, required)
-
-    def _init_click_option(self, parameter_name, name, type, required):
-        opt_name = [f"--{parameter_name}", name.replace(".", "_")]
-
-        if required:
-            opt_name = [
-                f"{x}/--no-{x[2:]}" if x.startswith("--") else x for x in opt_name[:-1]
-            ] + [opt_name[-1]]
-            _click.Option.__init__(
-                self,
-                opt_name,
-                type=_click.types.BoolParamType(),
-                default=False,
-                is_eager=True,
-                required=True,
-                help=f"Set {name} to a {self.get_class_name(type)} instance",
-            )
-            # NOTE: this is fix for 8.0.x version of click
-            self.default = None
-        else:
-            _click.Option.__init__(
-                self,
-                opt_name,
-                is_flag=True,
-                default=False,
-                is_eager=True,
-                help=f"Set {name} to a {self.get_class_name(type)} instance",
-            )
-
-    def assert_is_supported(self, command: Command) -> "OptionalTypeHierarchicalOption":
-        assert self.full_name is not None
-        command._assert_signature_is_supported(
-            _full_signature(self.optional_type), self.full_name + "."
-        )
-        return self
-
-    def get_params(self, ctx: _click.Context):
-        assert isinstance(ctx.command, Command)
-        assert isinstance(self.name, str)
-
-        current_value = self._get_or_store_first_value(
-            ctx, ctx.params.get(self.name, inspect._empty)
-        )
-        if current_value is not None and current_value:
-            return self._get_params_for_class(self.optional_type, ctx)
-        return []
-
-    def handle_parse_group_result(self, ctx: _click.Context) -> t.Any:
-        assert isinstance(ctx.command, Command)
-        assert isinstance(self.name, str)
-
-        ctx.params.pop(self.name)
-        control_parameter_value = self._get_first_value(ctx)
-        assert isinstance(control_parameter_value, bool)
-        if control_parameter_value:
-            ctx.params[self.name] = self._handle_parse_group_result_for_class(
-                self.optional_type, ctx
-            )
-        else:
-            ctx.params[self.name] = None
+def _build_inline_class_union_help(types, use_dashes: bool, num_examples: int = 0):
+    if num_examples == 0:
+        return ''
+    union_type: t.Type = t.cast(t.Type, t.Union[tuple(types)])
+    out = 'Examples of allowed values:\n'
+    limit_examples: t.Optional[int] = num_examples if num_examples >= 0 else None
+    out += '\n\n'.join(build_examples(union_type, use_dashes=use_dashes, limit=limit_examples))
+    return out

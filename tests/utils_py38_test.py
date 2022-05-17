@@ -1,5 +1,6 @@
 import inspect
 import typing as t
+from dataclasses import dataclass
 
 import aclick.utils
 import pytest
@@ -160,3 +161,92 @@ def test_wrap_fn_to_allow_kwargs_instead_of_args():
     assert out["y"] == 2
     assert out["z"] == "pass"
     assert out["u"] == "ok"
+
+
+def test_build_examples_str():
+    @dataclass
+    class A:
+        a: str
+
+    class B:
+        def __init__(self, b: int, /):
+            pass
+
+    class C:
+        pass
+
+    @dataclass
+    class D:
+        x: t.Union[A, B, C]
+        y: float = 3.14
+
+    examples = aclick.utils.build_examples(A)
+    assert examples == ['''a(
+  a={str})''']
+
+    examples = aclick.utils.build_examples(t.Union[A, B, C])
+    assert examples == ['''a(
+  a={str})''',
+      '''b(
+  {int})''',
+      'c()'
+    ]
+
+    examples = aclick.utils.build_examples(D)
+
+    def mkcls(inside):
+        inside = inside.lstrip().replace("\n", "\n  ")
+        return f'''d(
+  x={inside},
+  y={{optional float}})'''
+
+    assert examples == [
+        mkcls('''a(
+  a={str})'''),
+        mkcls('''b(
+  {int})'''),
+        mkcls('c()'),
+    ]
+
+    examples = aclick.utils.build_examples(t.Union[D, C])
+
+    assert examples == [
+        mkcls('''a(
+  a={str})'''),
+        'c()',
+        mkcls('''b(
+  {int})'''),
+        mkcls('c()'),
+    ]
+
+    examples = aclick.utils.build_examples(t.Union[D, C], limit=2)
+    assert examples == [
+        mkcls('''a(
+  a={str})'''),
+        'c()',
+    ]
+
+    examples = aclick.utils.build_examples(t.List[A])
+    assert examples == ['''(a(
+    a={str}),
+  ...)'''
+    ]
+
+    examples = aclick.utils.build_examples(t.Tuple[A, B])
+    assert examples == ['''(a(
+    a={str}),
+  b(
+    {int}))'''
+    ]
+
+    examples = aclick.utils.build_examples(t.OrderedDict[str, A])
+    assert examples == ['''{{str}=a(
+    a={str}),
+  ...}'''
+    ]
+
+    examples = aclick.utils.build_examples(t.Dict[str, A])
+    assert examples == ['''{{str}=a(
+    a={str}),
+  ...}'''
+    ]
