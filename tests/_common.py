@@ -5,6 +5,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from functools import partial
 
 import aclick as click
+from aclick.utils import _full_signature, _get_signature_args_kwargs, _is_class
 
 SUPPORTS_POSITIONAL_ONLY_ARGUMENTS = sys.version_info >= (3, 8, 0)
 
@@ -36,16 +37,23 @@ def click_test(*args, **kwargs):
 
 
 def _call_fn_empty(fn, *args, **kwargs):
-    fn = partial(fn, *args, **kwargs)
+    def construct(tp):
+        if _is_class(tp):
+            return _call_fn_empty(tp)
+        return None
 
-    signature = inspect.signature(fn)
-    args = [None] * sum(
-        1
-        for p in signature.parameters.values()
-        if p.kind
-        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
-    )
-    fn(*args)
+    fn = partial(fn, *args, **kwargs)
+    signature = _full_signature(fn)
+    args_par, kwargs_par = _get_signature_args_kwargs(signature, exclusive=True)
+    new_args = [
+        construct(x.annotation) for x in args_par if x.default is inspect._empty
+    ]
+    new_kwargs = {
+        x.name: construct(x.annotation)
+        for x in kwargs_par
+        if x.default is inspect._empty
+    }
+    return fn(*new_args, **new_kwargs)
 
 
 def click_test_error(*args, **kwargs):

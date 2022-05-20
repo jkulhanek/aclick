@@ -1,4 +1,5 @@
 import builtins
+import copy
 import dataclasses
 import inspect
 import itertools
@@ -18,6 +19,7 @@ except ImportError:
 
 T = t.TypeVar("T", bound=t.Callable)
 TType = t.TypeVar("TType", bound=t.Type)
+_SUPPORTED_TYPES = [str, float, int, bool]
 
 
 class ParameterWithDescription(inspect.Parameter):
@@ -517,14 +519,26 @@ def build_examples(
             )
         elif isinstance(example, tuple):
             return (
-                '('
-                + ",\n".join((_to_str(x, offset + indent).lstrip() if i == 0 else _to_str(x, offset + indent)) for i, x in enumerate(example))
+                "("
+                + ",\n".join(
+                    (
+                        _to_str(x, offset + indent).lstrip()
+                        if i == 0
+                        else _to_str(x, offset + indent)
+                    )
+                    for i, x in enumerate(example)
+                )
                 + ")"
             )
         elif isinstance(example, OrderedDict):
             return (
-                '{'
-                + ",\n".join(((' ' * (offset + indent)) if i != 0 else '') + (f'{k}=' if k is not None else '') + _to_str(x, offset + indent).lstrip() for i, (k, x) in enumerate(example.items()))
+                "{"
+                + ",\n".join(
+                    ((" " * (offset + indent)) if i != 0 else "")
+                    + (f"{k}=" if k is not None else "")
+                    + _to_str(x, offset + indent).lstrip()
+                    for i, (k, x) in enumerate(example.items())
+                )
                 + "}"
             )
         return (" " * offset) + str(example)
@@ -533,6 +547,163 @@ def build_examples(
 
 
 TSignature = t.TypeVar("TSignature", bound=inspect.Signature)
+
+
+def fill_signature_defaults_from_config(
+    config: t.Dict[str, t.Any]
+) -> t.Callable[[t.Callable], t.Callable]:
+    def wrap(callable_function: t.Callable) -> t.Callable:
+        def _inner(callable_function, config: t.Dict[str, t.Any], path=[]):
+            signature = _full_signature(callable_function)
+            out_parameters = []
+            for p in signature.parameters.values():
+                if p.name not in config:
+                    out_parameters.append(p)
+                    continue
+                sub_path = path + [p.name]
+                full_path = ".".join(sub_path)
+                sub_config = config.pop(p.name)
+                new_p = None
+                if getattr(p.annotation, "__origin__", None) is t.Union:
+                    if sub_config is None:
+                        if None not in p.annotation.__args__:
+                            class_names = sorted(
+                                get_class_name(x) for x in p.annotation.__args__
+                            )
+                            raise RuntimeError(
+                                f'Invalid value for parameter {full_path}. None is not in the list of supported classes: {", ".join(class_names)}'
+                            )
+                        new_p = p.replace(default=None)
+                    elif (
+                        isinstance(sub_config, dict)
+                        and sum(
+                            1 for x in p.annotation.__args__ if x not in (type(None),)
+                        )
+                        == 1
+                    ):
+                        cls = next(
+                            x for x in p.annotation.__args__ if x not in (type(None),)
+                        )
+                        new_p = p.replace(annotation=_inner(cls, sub_config, sub_path))
+                    # Union type with specified class
+                    elif isinstance(sub_config, dict) and "__class__" in sub_config:
+                        class_name = sub_config.pop("__class__")
+                        cls = next(
+                            (
+                                x
+                                for x in p.annotation.__args__
+                                if get_class_name(x).replace("-", "_")
+                                == class_name.replace("-", "_")
+                            ),
+                            None,
+                        )
+                        if cls is None:
+                            class_names = sorted(
+                                get_class_name(x) for x in p.annotation.__args__
+                            )
+                            raise RuntimeError(
+                                f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
+                            )
+                        new_p = p.replace(annotation=_inner(cls, sub_config, sub_path))
+                    # Union type without specified class
+                    # We will restrict all members of union
+                    elif isinstance(sub_config, dict) and all(
+                        _is_class(x) or x in (type(None),)
+                        for x in p.annotation.__args__
+                    ):
+                        sub_types = tuple(
+                            _inner(x, copy.deepcopy(sub_config), sub_path)
+                            for x in p.annotation.__args__
+                            if x not in (type(None),)
+                        )
+                        new_p = p.replace(annotation=t.Union[sub_types])
+                    elif any(
+                        isinstance(sub_config, x) for x in _SUPPORTED_TYPES
+                    ) and any(isinstance(sub_config, x) for x in p.annotation.__args__):
+                        new_p = p.replace(
+                            annotation=next(
+                                x
+                                for x in p.annotation.__args__
+                                if isinstance(sub_config, x)
+                            ),
+                            default=sub_config,
+                        )
+
+                elif p.annotation in _SUPPORTED_TYPES:
+                    if not isinstance(sub_config, p.annotation):
+                        raise RuntimeError(
+                            f"Invalid type for parameter {full_path}, expected {p.annotation} but found {type(sub_config)}"
+                        )
+                    new_p = p.replace(default=sub_config)
+                elif (
+                    getattr(p.annotation, "__origin__", None) is t.Literal
+                    and sub_config in p.annotation.__args__
+                ):
+                    new_p = p.replace(default=sub_config)
+                elif _is_class(p.annotation):
+                    new_p = p.replace(
+                        annotation=_inner(p.annotation, sub_config, sub_path)
+                    )
+
+                if new_p is None:
+                    raise RuntimeError(
+                        f"Unsupported type for parameter {full_path}. The parameter has type {type(p.annotation)} and the passed value was {sub_config}"
+                    )
+                out_parameters.append(new_p)
+
+            signature = signature.replace(parameters=out_parameters)
+
+            def out_fn(*args, **kwargs):
+                # Set defaults
+                new_args = []
+                new_kwargs = dict()
+                for par, arg in zip(signature.parameters.values(), args):
+                    assert par.kind in {
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    }
+                    new_args.append(arg)
+                for par in itertools.islice(
+                    signature.parameters.values(), len(args), None
+                ):
+                    if par.default is inspect._empty:
+                        continue
+                    if par.kind == inspect.Parameter.POSITIONAL_ONLY:
+                        new_args.append(par.default)
+                    elif par.kind in {
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    }:
+                        new_kwargs[par.name] = par.default
+                new_kwargs.update(kwargs)
+                return callable_function(*new_args, **new_kwargs)
+
+            setattr(out_fn, "__signature__", signature)
+            out_fn.__doc__ = callable_function.__doc__
+            out_fn.__name__ = callable_function.__name__
+            if _is_class(callable_function):
+
+                class OutClass(callable_function):  # type: ignore
+                    pass
+
+                setattr(
+                    OutClass,
+                    "__new__",
+                    lambda _, *args, **kwargs: out_fn(*args, **kwargs),
+                )
+                OutClass.__signature__ = signature
+                OutClass.__doc__ = callable_function.__doc__
+                OutClass.__name__ = callable_function.__name__
+                if hasattr(callable_function, "from_str"):
+                    setattr(
+                        OutClass, "from_str", getattr(callable_function, "from_str")
+                    )
+                return OutClass
+            return out_fn
+
+        return _inner(callable_function, config)
+
+    return wrap
 
 
 def _merge_signatures(
@@ -820,9 +991,7 @@ def _build_examples(
     class _switch_type(list):
         pass
 
-    def inner(
-        cls, ignore_from_str=True, use_dashes=False, is_optional=False
-    ):
+    def inner(cls, ignore_from_str=True, use_dashes=False, is_optional=False):
         if not ignore_from_str and hasattr(cls, "from_str"):
             return _ClassArgument._escaped_str(
                 ("{optional " if is_optional else "{")
@@ -841,18 +1010,39 @@ def _build_examples(
                 )
                 for x in cls.__args__
             )
-        elif getattr(cls, '__origin__', None) is tuple:
-            return tuple(inner(x, False, use_dashes=use_dashes, is_optional=is_optional) for x in cls.__args__)
-        elif getattr(cls, '__origin__', None) is list:
-            return (
-                inner(cls.__args__[0], False, use_dashes=use_dashes, is_optional=is_optional),
-                _ClassArgument._escaped_str('...')
+        elif getattr(cls, "__origin__", None) is tuple:
+            return tuple(
+                inner(x, False, use_dashes=use_dashes, is_optional=is_optional)
+                for x in cls.__args__
             )
-        elif getattr(cls, '__origin__', None) in {dict, OrderedDict} and cls.__args__[0] is str:
-            return OrderedDict([
-                ('{str}', inner(cls.__args__[1], False, use_dashes=use_dashes, is_optional=is_optional)),
-                (None, _ClassArgument._escaped_str('...'))
-            ])
+        elif getattr(cls, "__origin__", None) is list:
+            return (
+                inner(
+                    cls.__args__[0],
+                    False,
+                    use_dashes=use_dashes,
+                    is_optional=is_optional,
+                ),
+                _ClassArgument._escaped_str("..."),
+            )
+        elif (
+            getattr(cls, "__origin__", None) in {dict, OrderedDict}
+            and cls.__args__[0] is str
+        ):
+            return OrderedDict(
+                [
+                    (
+                        "{str}",
+                        inner(
+                            cls.__args__[1],
+                            False,
+                            use_dashes=use_dashes,
+                            is_optional=is_optional,
+                        ),
+                    ),
+                    (None, _ClassArgument._escaped_str("...")),
+                ]
+            )
         elif inspect.isclass(cls) and issubclass(cls, (bool, float, int, bytes, str)):
             typename = next(
                 x.__name__ for x in (bool, float, int, bytes, str) if issubclass(cls, x)
@@ -908,7 +1098,7 @@ def _build_examples(
             yield from itertools.islice(values, limit)
             return
         elif isinstance(class_structure, tuple):
-            args_to_expand = class_structure
+            args_to_expand: t.Sequence = class_structure
             values = itertools.product(
                 *(expand_flat(expand_switch_types, x) for x in args_to_expand)
             )

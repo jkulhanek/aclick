@@ -18,12 +18,12 @@ from .utils import (
     Literal,
     ParameterWithDescription,
     SignatureWithDescription,
-    build_examples
+    build_examples,
+    _SUPPORTED_TYPES
 )
 
 
 _get_class_name = get_class_name
-_SUPPORTED_TYPES = [str, float, int, bool]
 
 
 class ParameterRenamer(metaclass=ABCMeta):
