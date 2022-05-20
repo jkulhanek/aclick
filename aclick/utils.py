@@ -636,7 +636,7 @@ def fill_signature_defaults_from_config(
                         )
                     new_p = p.replace(default=sub_config)
                 elif (
-                    getattr(p.annotation, "__origin__", None) is t.Literal
+                    getattr(p.annotation, "__origin__", None) is Literal
                     and sub_config in p.annotation.__args__
                 ):
                     new_p = p.replace(default=sub_config)

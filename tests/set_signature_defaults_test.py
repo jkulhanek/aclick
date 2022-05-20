@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 
 import aclick
 
-from aclick.utils import _is_class, fill_signature_defaults_from_config
+from aclick.utils import _is_class, fill_signature_defaults_from_config, Literal
 
 from ._common import _call_fn_empty, click_test
 
@@ -44,7 +44,7 @@ def test_set_signature_defaults_simple_types():
     fn()
 
     @fill_signature_defaults_from_config(dict(a="ok"))
-    def fn(a: t.Literal["ok", "fail"] = "fail"):
+    def fn(a: Literal["ok", "fail"] = "fail"):
         assert a == "ok"
 
     fn()
