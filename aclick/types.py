@@ -1,15 +1,23 @@
+import inspect
 import typing as t
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import click as _click
-import inspect
 from click.types import ParamType
-from dataclasses import field, dataclass
 
-from .utils import _ClassArgument, _is_class, get_class_name, parse_class_structure
-from .utils import ParseClassStructureError, build_examples
-from .utils import _full_signature, _wrap_fn_to_allow_kwargs_instead_of_args
-from .utils import get_class_name as _get_class_name
-from typing import TYPE_CHECKING
+from .utils import (
+    _ClassArgument,
+    _full_signature,
+    _is_class,
+    _wrap_fn_to_allow_kwargs_instead_of_args,
+    build_examples,
+    get_class_name,
+    get_class_name as _get_class_name,
+    parse_class_structure,
+    ParseClassStructureError,
+)
+
 if TYPE_CHECKING:
     from .core import Command
 
@@ -19,7 +27,7 @@ class ParameterGroup:
         self.full_name = full_name
         self.name = full_name.replace(".", "_") if full_name is not None else None
 
-    def assert_is_supported(self, command: 'Command') -> "ParameterGroup":
+    def assert_is_supported(self, command: "Command") -> "ParameterGroup":
         return self  # pragma: no cover
 
     def get_params(
@@ -31,20 +39,24 @@ class ParameterGroup:
         pass  # pragma: no cover
 
     def _handle_parse_group_result_for_class(self, cls: t.Type, ctx: _click.Context):
-        assert hasattr(ctx.command, 'build_click_parameter')
+        assert hasattr(ctx.command, "build_click_parameter")
         local_params = dict()
         for param in _full_signature(cls).parameters.values():
             param_name = f"{self.full_name}.{param.name}"
-            click_param = getattr(ctx.command, 'build_click_parameter')(param_name, param)
+            click_param = getattr(ctx.command, "build_click_parameter")(
+                param_name, param
+            )
             if click_param is not None and click_param.name is not None:
                 local_params[param.name] = ctx.params.pop(click_param.name)
         return _wrap_fn_to_allow_kwargs_instead_of_args(cls)(**local_params)
 
     def _get_params_for_class(self, cls: t.Type, ctx: _click.Context):
-        assert hasattr(ctx.command, 'build_click_parameter')
+        assert hasattr(ctx.command, "build_click_parameter")
         for param in _full_signature(cls).parameters.values():
             param_name = f"{self.full_name}.{param.name}"
-            click_param = getattr(ctx.command, 'build_click_parameter')(param_name, param)
+            click_param = getattr(ctx.command, "build_click_parameter")(
+                param_name, param
+            )
             if click_param is not None:
                 yield click_param
 
@@ -110,6 +122,8 @@ class List(_click.ParamType):
         param: t.Optional[_click.Parameter],
         ctx: t.Optional[_click.Context],
     ) -> t.Any:
+        if isinstance(value, list):
+            return value
         assert isinstance(value, str)
         values = [str(x) for x in _ClassArgument.from_str(f"list({value})").args]
         return [self.inner_type.convert(x, param, ctx) for x in values]
@@ -131,8 +145,10 @@ class ClassUnion(_click.ParamType):
     name = "class union"
 
     def __init__(
-        self, classes: t.List[t.Type], known_classes: t.Optional[t.List[t.Type]] = None,
-        num_examples_on_error: int = 3
+        self,
+        classes: t.List[t.Type],
+        known_classes: t.Optional[t.List[t.Type]] = None,
+        num_examples_on_error: int = 3,
     ):
         self.classes = classes
         self.known_classes = known_classes
@@ -148,17 +164,32 @@ class ClassUnion(_click.ParamType):
         ctx: t.Optional[_click.Context],
     ) -> t.Any:
 
+        if any(isinstance(value, x) for x in self.classes):
+            return value
+
         assert isinstance(value, str)
-        aclick_ctx = _AClickContext() if ctx is None else ctx.ensure_object(_AClickContext)
+        aclick_ctx = (
+            _AClickContext() if ctx is None else ctx.ensure_object(_AClickContext)
+        )
         try:
             value = parse_class_structure(value, self.classes, self.known_classes)
         except ParseClassStructureError as err:
             msg = str(err)
             if self.num_examples_on_error != 0:
-                msg += '\n\nExamples of allowed values:\n'
+                msg += "\n\nExamples of allowed values:\n"
                 union_type: t.Type = t.cast(t.Type, t.Union[tuple(self.classes)])
-                num_examples_on_error = self.num_examples_on_error if self.num_examples_on_error >= 0 else None
-                msg += '\n\n'.join(build_examples(union_type, use_dashes=aclick_ctx.use_dashes, limit=num_examples_on_error))
+                num_examples_on_error = (
+                    self.num_examples_on_error
+                    if self.num_examples_on_error >= 0
+                    else None
+                )
+                msg += "\n\n".join(
+                    build_examples(
+                        union_type,
+                        use_dashes=aclick_ctx.use_dashes,
+                        limit=num_examples_on_error,
+                    )
+                )
 
             raise _click.ClickException(msg) from err
         return value
@@ -180,9 +211,9 @@ class ClassHierarchicalOption(ParameterGroup):
         super().__init__(name)
         self.class_type = type
 
-    def assert_is_supported(self, command: 'Command') -> "ClassHierarchicalOption":
+    def assert_is_supported(self, command: "Command") -> "ClassHierarchicalOption":
         assert self.full_name is not None
-        assert hasattr(command, '_assert_signature_is_supported')
+        assert hasattr(command, "_assert_signature_is_supported")
         command._assert_signature_is_supported(
             _full_signature(self.class_type), self.full_name + "."
         )
@@ -213,9 +244,9 @@ class UnionTypeHierarchicalOption(_click.Option, ParameterGroup):
         self.get_class_name = get_class_name or _get_class_name
         self._init_click_option(parameter_name, name, type, required)
 
-    def assert_is_supported(self, command: 'Command') -> "UnionTypeHierarchicalOption":
+    def assert_is_supported(self, command: "Command") -> "UnionTypeHierarchicalOption":
         assert self.full_name is not None
-        assert hasattr(command, '_assert_signature_is_supported')
+        assert hasattr(command, "_assert_signature_is_supported")
         for c in self.classes:
             command._assert_signature_is_supported(
                 _full_signature(c), self.full_name + "."
@@ -319,9 +350,11 @@ class OptionalTypeHierarchicalOption(_click.Option, ParameterGroup):
                 help=f"Set {name} to a {self.get_class_name(type)} instance",
             )
 
-    def assert_is_supported(self, command: 'Command') -> "OptionalTypeHierarchicalOption":
+    def assert_is_supported(
+        self, command: "Command"
+    ) -> "OptionalTypeHierarchicalOption":
         assert self.full_name is not None
-        assert hasattr(command, '_assert_signature_is_supported')
+        assert hasattr(command, "_assert_signature_is_supported")
         command._assert_signature_is_supported(
             _full_signature(self.optional_type), self.full_name + "."
         )
@@ -356,3 +389,4 @@ class _AClickContext:
     param_groups: t.List[ParameterGroup] = field(default_factory=list)
     param_group_contexts: t.Dict[str, t.Any] = field(default_factory=dict)
     use_dashes: bool = True
+    configuration_file_loaded: t.Optional[str] = None

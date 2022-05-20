@@ -85,6 +85,19 @@ def test_list_of_str(a: List[str]):
     assert a[1] == "test2"
 
 
+@click_test("--a", "test,test2")
+def test_optional_list_of_str(a: t.Optional[List[str]] = None):
+    assert a is not None
+    assert len(a) == 2
+    assert a[0] == "test"
+    assert a[1] == "test2"
+
+
+@click_test()
+def test_optional_list_of_str2(a: t.Optional[List[str]] = None):
+    assert a is None
+
+
 @click_test("--b", "1", "test,test2")
 def test_tuple_of_list_of_str(b: t.Tuple[int, List[str]]):
     assert len(b) == 2

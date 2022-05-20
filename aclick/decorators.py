@@ -2,8 +2,13 @@ import typing as t
 
 import click as _click
 
-from .core import Command, Group
-from .utils import _full_signature, _get_help_text
+from .core import _AClickContext, Command, Group
+from .utils import (
+    _full_signature,
+    _get_help_text,
+    _wrap_fn_to_allow_kwargs_instead_of_args,
+    fill_signature_defaults_from_config as _fill_signature_defaults_from_config,
+)
 
 
 CmdType = t.TypeVar("CmdType", bound=Command)
@@ -145,3 +150,48 @@ def group(
         return grp(name)
 
     return t.cast(Group, command(name, **attrs))
+
+
+def configuration_option(
+    *param_decls: str,
+    parse_configuration: t.Callable[[t.Any], t.Dict[str, t.Any]] = None,
+    **kwargs: t.Any,
+) -> t.Callable[[F], F]:
+    """Add a ``--configuration`` option which allows to specify a configuration
+    file to read the default configuration from
+    :param param_decls: One or more option names. Defaults to the single
+        value ``"--configuration"``.
+    :param parse_configuration: Function used to parse configuration. By default a json parser is used.
+    :param kwargs: Extra arguments are passed to :func:`option`.
+    """
+
+    if parse_configuration is None:
+        from .utils import parse_json_configuration
+
+        parse_configuration = parse_json_configuration
+
+    def callback(ctx, param, value: str) -> None:
+        assert parse_configuration is not None
+        click_ctx = ctx.ensure_object(_AClickContext)
+        if not value or click_ctx.configuration_file_loaded is not None:
+            return
+
+        command = ctx.command
+        with open(value) as fconfig:
+            cfg = parse_configuration(fconfig)
+            callback = getattr(command.callback, "__original_fn__", command.callback)
+            callback = _fill_signature_defaults_from_config(cfg)(callback)
+            signature = _full_signature(callback)
+            command.callback = _wrap_fn_to_allow_kwargs_instead_of_args(callback)
+            command.callback_signature = signature
+            click_ctx.configuration_file_loaded = value
+
+    if not param_decls:
+        param_decls = ("--configuration",)
+
+    kwargs.setdefault("expose_value", False)
+    kwargs.setdefault("is_eager", True)
+    kwargs.setdefault("default", None)
+    kwargs.setdefault("help", "Load configuration from a file.")
+    kwargs["callback"] = callback
+    return _click.option(*param_decls, **kwargs)
