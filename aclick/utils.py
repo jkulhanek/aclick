@@ -297,6 +297,8 @@ def default_from_str(cls=None):
         )
         setattr(cls, "__str_with_dashes_option__", _class_to_str_with_dashes_option)
         setattr(cls, "__str__", _class_to_str)
+        if repr:
+            setattr(cls, "__repr__", _class_to_str)
         return cls
 
     if cls is not None:
@@ -546,6 +548,17 @@ def build_examples(
     return list(map(_to_str, examples))
 
 
+def parse_json_configuration(fp):
+    """
+    Loads a configuration stored in a json file
+
+    :param fp: opened json file stream
+    """
+    import json
+
+    return json.load(fp)
+
+
 TSignature = t.TypeVar("TSignature", bound=inspect.Signature)
 
 
@@ -553,103 +566,127 @@ def fill_signature_defaults_from_config(
     config: t.Dict[str, t.Any]
 ) -> t.Callable[[t.Callable], t.Callable]:
     def wrap(callable_function: t.Callable) -> t.Callable:
-        def _inner(callable_function, config: t.Dict[str, t.Any], path=[]):
+        def _update_parameter_with_default(p, sub_config, sub_path):
+            full_path = ".".join(sub_path)
+            new_p = None
+            if hasattr(p.annotation, "from_str") and isinstance(sub_config, str):
+                new_p = p.replace(default=p.annotation.from_str(sub_config))
+            elif (
+                getattr(p.annotation, "__origin__", None)
+                in (
+                    list,
+                    tuple,
+                )
+                and isinstance(sub_config, (list, tuple))
+            ):
+                new_p = p.replace(default=list(sub_config))
+            elif getattr(p.annotation, "__origin__", None) is t.Union:
+                if sub_config is None:
+                    if None not in p.annotation.__args__:
+                        class_names = sorted(
+                            get_class_name(x) for x in p.annotation.__args__
+                        )
+                        raise RuntimeError(
+                            f'Invalid value for parameter {full_path}. None is not in the list of supported classes: {", ".join(class_names)}'
+                        )
+                    new_p = p.replace(default=None)
+                elif (
+                    sum(1 for x in p.annotation.__args__ if x not in (type(None),)) == 1
+                ):
+                    cls = next(
+                        x for x in p.annotation.__args__ if x not in (type(None),)
+                    )
+                    new_p = _update_parameter_with_default(
+                        p.replace(annotation=cls), sub_config, sub_path
+                    )
+                # Union type with specified class
+                elif isinstance(sub_config, dict) and "__class__" in sub_config:
+                    class_name = sub_config.pop("__class__")
+                    cls = next(
+                        (
+                            x
+                            for x in p.annotation.__args__
+                            if get_class_name(x).replace("-", "_")
+                            == class_name.replace("-", "_")
+                        ),
+                        None,
+                    )
+                    if cls is None:
+                        class_names = sorted(
+                            get_class_name(x) for x in p.annotation.__args__
+                        )
+                        raise RuntimeError(
+                            f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
+                        )
+                    new_p = p.replace(
+                        annotation=_map_callable(cls, sub_config, sub_path)
+                    )
+                # Union type without specified class
+                # We will restrict all members of union
+                elif isinstance(sub_config, dict) and all(
+                    _is_class(x) or x in (type(None),) for x in p.annotation.__args__
+                ):
+                    sub_types = tuple(
+                        _map_callable(x, copy.deepcopy(sub_config), sub_path)
+                        for x in p.annotation.__args__
+                        if x not in (type(None),)
+                    )
+                    new_p = p.replace(annotation=t.Union[sub_types])
+                elif any(isinstance(sub_config, x) for x in _SUPPORTED_TYPES) and any(
+                    isinstance(sub_config, x) for x in p.annotation.__args__
+                ):
+                    new_p = p.replace(
+                        annotation=next(
+                            x
+                            for x in p.annotation.__args__
+                            if isinstance(sub_config, x)
+                        ),
+                        default=sub_config,
+                    )
+
+            elif p.annotation in _SUPPORTED_TYPES:
+                if not isinstance(sub_config, p.annotation):
+                    raise RuntimeError(
+                        f"Invalid type for parameter {full_path}, expected {p.annotation} but found {type(sub_config)}"
+                    )
+                new_p = p.replace(default=sub_config)
+            elif (
+                getattr(p.annotation, "__origin__", None) is Literal
+                and sub_config in p.annotation.__args__
+            ):
+                new_p = p.replace(default=sub_config)
+            elif _is_class(p.annotation):
+                new_p = p.replace(
+                    annotation=_map_callable(p.annotation, sub_config, sub_path)
+                )
+
+            if new_p is None:
+                raise RuntimeError(
+                    f"Unsupported type for parameter {full_path}. The parameter has type {type(p.annotation)} and the passed value was {sub_config}"
+                )
+            return new_p
+
+        def _map_callable(callable_function, config: t.Dict[str, t.Any], path):
             signature = _full_signature(callable_function)
             out_parameters = []
+            was_default = False
+            keyword_only = True
             for p in signature.parameters.values():
-                if p.name not in config:
-                    out_parameters.append(p)
-                    continue
-                sub_path = path + [p.name]
-                full_path = ".".join(sub_path)
-                sub_config = config.pop(p.name)
-                new_p = None
-                if getattr(p.annotation, "__origin__", None) is t.Union:
-                    if sub_config is None:
-                        if None not in p.annotation.__args__:
-                            class_names = sorted(
-                                get_class_name(x) for x in p.annotation.__args__
-                            )
-                            raise RuntimeError(
-                                f'Invalid value for parameter {full_path}. None is not in the list of supported classes: {", ".join(class_names)}'
-                            )
-                        new_p = p.replace(default=None)
-                    elif (
-                        isinstance(sub_config, dict)
-                        and sum(
-                            1 for x in p.annotation.__args__ if x not in (type(None),)
-                        )
-                        == 1
-                    ):
-                        cls = next(
-                            x for x in p.annotation.__args__ if x not in (type(None),)
-                        )
-                        new_p = p.replace(annotation=_inner(cls, sub_config, sub_path))
-                    # Union type with specified class
-                    elif isinstance(sub_config, dict) and "__class__" in sub_config:
-                        class_name = sub_config.pop("__class__")
-                        cls = next(
-                            (
-                                x
-                                for x in p.annotation.__args__
-                                if get_class_name(x).replace("-", "_")
-                                == class_name.replace("-", "_")
-                            ),
-                            None,
-                        )
-                        if cls is None:
-                            class_names = sorted(
-                                get_class_name(x) for x in p.annotation.__args__
-                            )
-                            raise RuntimeError(
-                                f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
-                            )
-                        new_p = p.replace(annotation=_inner(cls, sub_config, sub_path))
-                    # Union type without specified class
-                    # We will restrict all members of union
-                    elif isinstance(sub_config, dict) and all(
-                        _is_class(x) or x in (type(None),)
-                        for x in p.annotation.__args__
-                    ):
-                        sub_types = tuple(
-                            _inner(x, copy.deepcopy(sub_config), sub_path)
-                            for x in p.annotation.__args__
-                            if x not in (type(None),)
-                        )
-                        new_p = p.replace(annotation=t.Union[sub_types])
-                    elif any(
-                        isinstance(sub_config, x) for x in _SUPPORTED_TYPES
-                    ) and any(isinstance(sub_config, x) for x in p.annotation.__args__):
-                        new_p = p.replace(
-                            annotation=next(
-                                x
-                                for x in p.annotation.__args__
-                                if isinstance(sub_config, x)
-                            ),
-                            default=sub_config,
-                        )
-
-                elif p.annotation in _SUPPORTED_TYPES:
-                    if not isinstance(sub_config, p.annotation):
-                        raise RuntimeError(
-                            f"Invalid type for parameter {full_path}, expected {p.annotation} but found {type(sub_config)}"
-                        )
-                    new_p = p.replace(default=sub_config)
-                elif (
-                    getattr(p.annotation, "__origin__", None) is Literal
-                    and sub_config in p.annotation.__args__
-                ):
-                    new_p = p.replace(default=sub_config)
-                elif _is_class(p.annotation):
-                    new_p = p.replace(
-                        annotation=_inner(p.annotation, sub_config, sub_path)
-                    )
-
-                if new_p is None:
-                    raise RuntimeError(
-                        f"Unsupported type for parameter {full_path}. The parameter has type {type(p.annotation)} and the passed value was {sub_config}"
-                    )
-                out_parameters.append(new_p)
+                if p.name in config:
+                    sub_path = path + [p.name]
+                    sub_config = config.pop(p.name)
+                    p = _update_parameter_with_default(p, sub_config, sub_path)
+                if was_default and p.default is inspect._empty:
+                    keyword_only = True
+                if keyword_only:
+                    assert p.kind in {
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY,
+                    }
+                    p = p.replace(kind=inspect.Parameter.KEYWORD_ONLY)
+                if p.default is not inspect._empty:
+                    was_default = True
+                out_parameters.append(p)
 
             signature = signature.replace(parameters=out_parameters)
 
@@ -701,7 +738,7 @@ def fill_signature_defaults_from_config(
                 return OutClass
             return out_fn
 
-        return _inner(callable_function, config)
+        return _map_callable(callable_function, config, [])
 
     return wrap
 

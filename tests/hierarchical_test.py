@@ -263,3 +263,21 @@ def test_hierarchical_classes(a: D5):
     assert isinstance(a.c, D2)
     assert a.c.test == "ok"
     assert a.test == "ok2"
+
+
+@dataclass
+class D6:
+    test: str
+
+    @classmethod
+    def from_str(cls, val):
+        return D6(val)
+
+    def __str__(self):
+        return self.test
+
+
+@click_test("--a", 'd6("passed")', hierarchical=True)
+def test_hierarchical_parsing_disabled_for_from_str_classes(a: D6):
+    assert isinstance(a, D6)
+    assert a.test == "passed"

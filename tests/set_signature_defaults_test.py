@@ -8,7 +8,7 @@ import aclick
 
 from aclick.utils import _is_class, fill_signature_defaults_from_config, Literal
 
-from ._common import _call_fn_empty, click_test
+from ._common import _call_fn_empty, click_test, click_test_error
 
 
 def _store_config(cfg):
@@ -253,5 +253,73 @@ def test_config_option_union_type(monkeypatch):
             assert a.a == "ok"
             assert a.b == 4
             assert a.c == 2
+
+        main(monkeypatch)
+
+
+def test_config_option_list_type(monkeypatch):
+    with _store_config(dict(a=["ok", "ok2"])) as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: t.List[str]):
+            assert isinstance(a, list)
+            assert a == ["ok", "ok2"]
+
+        main(monkeypatch)
+
+    with _store_config(dict(a=["ok", '"jonas"'])) as cfg:
+
+        @click_test_error("--config", cfg.name, "--help")
+        @aclick.configuration_option("--config")
+        def main(err, a: t.List[str] = ["ok", "ok2"]):
+            status, msg = err
+            assert status == 0
+            assert 'ok, "\\"jonas\\""' in msg
+
+        main(monkeypatch)
+
+
+def test_config_option_from_str_type(monkeypatch):
+    @dataclass
+    class A:
+        x: str
+
+        @classmethod
+        def from_str(cls, val):
+            return A("ok" + val)
+
+        def __str__(self):
+            assert self.x.startswith("ok")
+            return self.x[2:]
+
+    with _store_config(dict(a="cls")) as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.x == "okcls"
+
+        main(monkeypatch)
+
+    with _store_config(dict(a="cls")) as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: t.Optional[A]):
+            assert isinstance(a, A)
+            assert a.x == "okcls"
+
+        main(monkeypatch)
+
+    with _store_config(dict(a="jclass")) as cfg:
+
+        @click_test_error("--config", cfg.name, "--help")
+        @aclick.configuration_option("--config")
+        def main(err, a: A = A("cls")):
+            status, msg = err
+            assert status == 0
+            assert "jclass" in msg
 
         main(monkeypatch)

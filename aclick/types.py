@@ -122,6 +122,8 @@ class List(_click.ParamType):
         param: t.Optional[_click.Parameter],
         ctx: t.Optional[_click.Context],
     ) -> t.Any:
+        if isinstance(value, list):
+            return value
         assert isinstance(value, str)
         values = [str(x) for x in _ClassArgument.from_str(f"list({value})").args]
         return [self.inner_type.convert(x, param, ctx) for x in values]
@@ -161,6 +163,9 @@ class ClassUnion(_click.ParamType):
         param: t.Optional[_click.Parameter],
         ctx: t.Optional[_click.Context],
     ) -> t.Any:
+
+        if any(isinstance(value, x) for x in self.classes):
+            return value
 
         assert isinstance(value, str)
         aclick_ctx = (

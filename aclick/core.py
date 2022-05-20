@@ -16,7 +16,9 @@ from .types import (
     Tuple,
     UnionTypeHierarchicalOption,
 )
+
 from .utils import (
+    _class_to_str_with_dashes_option,
     _full_signature,
     _get_help_text,
     _is_class,
@@ -279,7 +281,7 @@ class Command(_click.Command):
                     + _build_inline_class_union_help(
                         [parameter_type], self.use_dashes, self.num_inline_examples_help
                     ).replace("\n\n", "\n\n\b\n")
-                    + "\n\n"
+                    + "\n\n "
                 )
             kwargs["type"] = ClassUnion([parameter_type])
             return cls(option_name, **kwargs)
@@ -321,6 +323,14 @@ class Command(_click.Command):
 
         if getattr(parameter_type, "__origin__", None) is list:
             kwargs["type"] = List(parameter_type.__args__[0])
+            if (
+                "default" in kwargs
+                and kwargs.get("show_default", False)
+                and isinstance(kwargs["default"], list)
+            ):
+                kwargs["show_default"] = _class_to_str_with_dashes_option(
+                    kwargs["default"]
+                )[1:-1]
             return cls(option_name, **kwargs)
         if getattr(parameter_type, "__origin__", None) is tuple:
             kwargs["type"] = Tuple(list(parameter_type.__args__))
@@ -407,16 +417,9 @@ class Command(_click.Command):
                 for param in _click.core.iter_params_for_processing(
                     param_order, params
                 ):
-                    # Disable callback temporarily
-                    _callback = None
-                    try:
-                        _callback = param.callback
-                        if param.callback is not None and iters_left is None:
-                            iters_left = 1
-                        # param.callback = None
-                        value, args = param.handle_parse_result(local_ctx, opts, args)
-                    finally:
-                        param.callback = _callback
+                    if param.callback is not None and iters_left is None:
+                        iters_left = 1
+                    value, args = param.handle_parse_result(local_ctx, opts, args)
 
         super().parse_args(ctx, original_args)
 
@@ -599,7 +602,7 @@ def _is_hierarchical(param: inspect.Parameter) -> bool:
         inspect.Parameter.KEYWORD_ONLY,
         inspect.Parameter.POSITIONAL_OR_KEYWORD,
     }:
-        if _is_class(param.annotation):
+        if _is_class(param.annotation) and not hasattr(param.annotation, "from_str"):
             is_hierarchical = True
         elif getattr(param.annotation, "__origin__", None) is t.Union and any(
             _is_class(x) for x in param.annotation.__args__
