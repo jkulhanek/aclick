@@ -1416,4 +1416,5 @@ def _wrap_fn_to_allow_kwargs_instead_of_args(fn):
         ),
     )
     setattr(inner_fn, "__doc__", fn.__doc__)
+    setattr(inner_fn, "__original_fn__", fn)
     return inner_fn

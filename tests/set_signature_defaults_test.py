@@ -1,10 +1,21 @@
 import inspect
+import json
 import typing as t
 from dataclasses import dataclass
+from tempfile import NamedTemporaryFile
+
+import aclick
 
 from aclick.utils import _is_class, fill_signature_defaults_from_config
 
-from ._common import _call_fn_empty
+from ._common import _call_fn_empty, click_test
+
+
+def _store_config(cfg):
+    file = NamedTemporaryFile("w+")
+    json.dump(cfg, file)
+    file.flush()
+    return file
 
 
 def test_set_signature_defaults_simple_types():
@@ -189,3 +200,58 @@ def test_set_signature_defaults_union_class_type():
     for i, c in enumerate(sig.parameters["a"].annotation.__args__):
         assert c().a == "ok"
     assert i == 1
+
+
+def test_config_option(monkeypatch):
+    @dataclass
+    class A:
+        b: str = "ok"
+
+    with _store_config(dict(a=dict(b="passed"))) as cfg:
+
+        @click_test("--configuration", cfg.name)
+        @aclick.configuration_option()
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
+
+        main(monkeypatch)
+
+    with _store_config(dict(a=dict(b="passed"))) as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
+
+        main(monkeypatch)
+
+
+def test_config_option_union_type(monkeypatch):
+    @dataclass
+    class A:
+        a: str = "test"
+
+    @dataclass
+    class B:
+        a: str = "passed"
+        b: int = 3
+        c: int = 2
+
+        @classmethod
+        def _get_class_name(cls):
+            return "c"
+
+    with _store_config(dict(a=dict(__class__="c", a="ok", b=4))) as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: t.Union[A, B]):
+            assert isinstance(a, B)
+            assert type(a) == B
+            assert a.a == "ok"
+            assert a.b == 4
+            assert a.c == 2
+
+        main(monkeypatch)

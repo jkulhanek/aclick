@@ -3,23 +3,30 @@ import inspect
 import re
 import typing as t
 from abc import ABCMeta, abstractmethod
-from .types import _AClickContext
 
 import click as _click
 
-from .types import ClassUnion, List, Tuple
-from .types import ParameterGroup, OptionalTypeHierarchicalOption, UnionTypeHierarchicalOption, ClassHierarchicalOption
+from .types import (
+    _AClickContext,
+    ClassHierarchicalOption,
+    ClassUnion,
+    List,
+    OptionalTypeHierarchicalOption,
+    ParameterGroup,
+    Tuple,
+    UnionTypeHierarchicalOption,
+)
 from .utils import (
     _full_signature,
     _get_help_text,
     _is_class,
+    _SUPPORTED_TYPES,
     _wrap_fn_to_allow_kwargs_instead_of_args,
+    build_examples,
     get_class_name,
     Literal,
     ParameterWithDescription,
     SignatureWithDescription,
-    build_examples,
-    _SUPPORTED_TYPES
 )
 
 
@@ -263,11 +270,17 @@ class Command(_click.Command):
         if _is_class(parameter_type):
             if self.num_inline_examples_help != 0:
                 # Add help for inline examples
-                if 'help' not in kwargs or not kwargs['help']:
-                    kwargs['help'] = ''
-                if kwargs['help']:
-                    kwargs['help'] += '\n\n'
-                kwargs['help'] += '\b\n' + _build_inline_class_union_help([parameter_type], self.use_dashes, self.num_inline_examples_help).replace('\n\n', '\n\n\b\n') + '\n\n'
+                if "help" not in kwargs or not kwargs["help"]:
+                    kwargs["help"] = ""
+                if kwargs["help"]:
+                    kwargs["help"] += "\n\n"
+                kwargs["help"] += (
+                    "\b\n"
+                    + _build_inline_class_union_help(
+                        [parameter_type], self.use_dashes, self.num_inline_examples_help
+                    ).replace("\n\n", "\n\n\b\n")
+                    + "\n\n"
+                )
             kwargs["type"] = ClassUnion([parameter_type])
             return cls(option_name, **kwargs)
 
@@ -292,11 +305,17 @@ class Command(_click.Command):
             types = [x for x in parameter_type.__args__ if _is_class(x)]
             if self.num_inline_examples_help != 0:
                 # Add help for inline examples
-                if 'help' not in kwargs or not kwargs['help']:
-                    kwargs['help'] = ''
-                if kwargs['help']:
-                    kwargs['help'] += '\n\n'
-                kwargs['help'] += '\b\n' + _build_inline_class_union_help(types, self.use_dashes, self.num_inline_examples_help).replace('\n\n', '\n\n\b\n') + '\n\n'
+                if "help" not in kwargs or not kwargs["help"]:
+                    kwargs["help"] = ""
+                if kwargs["help"]:
+                    kwargs["help"] += "\n\n"
+                kwargs["help"] += (
+                    "\b\n"
+                    + _build_inline_class_union_help(
+                        types, self.use_dashes, self.num_inline_examples_help
+                    ).replace("\n\n", "\n\n\b\n")
+                    + "\n\n"
+                )
             kwargs["type"] = ClassUnion(types)
             return cls(option_name, **kwargs)
 
@@ -368,8 +387,10 @@ class Command(_click.Command):
             local_ctx.ensure_object(
                 _AClickContext
             ).param_group_contexts = aclick_ctx.param_group_contexts
+            local_ctx.command = ctx.command
             local_ctx.ignore_unknown_options = True
             local_ctx.resilient_parsing = True
+            iters_left = None
             while True:
                 parser = self.make_parser(local_ctx)
                 opts, args, param_order = parser.parse_args(
@@ -378,7 +399,10 @@ class Command(_click.Command):
 
                 params = self.get_params(local_ctx)
                 if last_num_params == len(params):
-                    break
+                    if iters_left is None or iters_left <= 0:
+                        break
+                    if iters_left is not None:
+                        iters_left -= 1
                 last_num_params = len(params)
                 for param in _click.core.iter_params_for_processing(
                     param_order, params
@@ -387,7 +411,9 @@ class Command(_click.Command):
                     _callback = None
                     try:
                         _callback = param.callback
-                        param.callback = None
+                        if param.callback is not None and iters_left is None:
+                            iters_left = 1
+                        # param.callback = None
                         value, args = param.handle_parse_result(local_ctx, opts, args)
                     finally:
                         param.callback = _callback
@@ -591,9 +617,11 @@ def _is_optional(tp):
 
 def _build_inline_class_union_help(types, use_dashes: bool, num_examples: int = 0):
     if num_examples == 0:
-        return ''
+        return ""
     union_type: t.Type = t.cast(t.Type, t.Union[tuple(types)])
-    out = 'Examples of allowed values:\n'
+    out = "Examples of allowed values:\n"
     limit_examples: t.Optional[int] = num_examples if num_examples >= 0 else None
-    out += '\n\n'.join(build_examples(union_type, use_dashes=use_dashes, limit=limit_examples))
+    out += "\n\n".join(
+        build_examples(union_type, use_dashes=use_dashes, limit=limit_examples)
+    )
     return out
