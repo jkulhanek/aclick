@@ -439,3 +439,8 @@ def test_as_dict_hierarchical_type():
 
     out = aclick.utils.as_dict(B(A('test')))
     assert out == OrderedDict([('a', OrderedDict([('a', 'test')]))])
+
+
+def test_as_dict_optional():
+    out = aclick.utils.as_dict(3.14, t.Optional[float])
+    assert isinstance(out, float)

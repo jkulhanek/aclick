@@ -696,13 +696,13 @@ def as_dict(obj: t.Any, tp: t.Optional[t.Type] = None) -> t.Any:
             if type(None) in types:
                 return None
         elif all(_is_class(x) for x in types if x not in (type(None),)) and any(isinstance(obj, x) for x in types):
-            out_type = next(x for x in types if isinstance(obj, x))
+            out_type = next(iter(sorted((x for x in types if isinstance(obj, x)), key=lambda x: -len(x.mro()))))
             out = as_dict(obj, out_type)
             if sum(1 for x in types if x not in (type(None),) and _is_class(x)) > 1:
                 out['__class__'] = get_class_name(out_type)
             return out
         elif any(x for x in types if x in _SUPPORTED_TYPES and isinstance(obj, x)):
-            return next(x for x in types if x in _SUPPORTED_TYPES and isinstance(obj, x))
+            return obj
 
     elif _is_class(tp):
         out = OrderedDict()
