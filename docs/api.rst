@@ -13,6 +13,8 @@ Decorators
 
 .. autofunction:: group
 
+.. autofunction:: configuration_option
+
 .. autofunction:: aclick.utils.copy_signature
 
 .. autofunction:: aclick.utils.default_from_str
@@ -37,11 +39,23 @@ Types
 
 .. autodata:: aclick.types.Tuple
 
+.. autodata:: aclick.types.ParameterGroup
+
+.. autodata:: aclick.types.ClassHierarchicalOption
+
+.. autodata:: aclick.types.UnionTypeHierarchicalOption
+
+.. autodata:: aclick.types.OptionalTypeHierarchicalOption
+
 
 Utilities
 ---------
 
 .. autofunction:: aclick.utils.parse_class_structure
+
+.. autofunction:: aclick.utils.as_dict
+
+.. autofunction:: aclick.utils.from_dict
 
 
 Other classes

@@ -154,11 +154,13 @@ def group(
 
 def configuration_option(
     *param_decls: str,
-    parse_configuration: t.Callable[[t.Any], t.Dict[str, t.Any]] = None,
+    parse_configuration: t.Optional[t.Callable[[t.Any], t.Dict[str, t.Any]]] = None,
     **kwargs: t.Any,
 ) -> t.Callable[[F], F]:
-    """Add a ``--configuration`` option which allows to specify a configuration
-    file to read the default configuration from
+    """
+    Add a ``--configuration`` option which allows to specify a configuration
+    file to read the default configuration from.
+
     :param param_decls: One or more option names. Defaults to the single
         value ``"--configuration"``.
     :param parse_configuration: Function used to parse configuration. By default a json parser is used.

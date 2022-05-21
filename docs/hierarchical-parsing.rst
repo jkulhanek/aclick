@@ -37,6 +37,9 @@ in hierarchical parsing. If your type in not supported, you can either inline
 it by wrapping it with :func:`aclick.default_from_str` wrapper or turn of hierarchical
 parsing by passing ``hierarchical = False`` to the command constructor.
 
+With a deep class structure the parameter names can grow long. Parameters
+can be renamed to prevent long names. For more information see :doc:`hierarchical parsing <hierarchical-parsing>` and :class:`FlattenParameterRenamer`.
+
 Custom classes
 --------------
 

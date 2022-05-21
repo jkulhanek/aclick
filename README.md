@@ -21,6 +21,8 @@ The following features are currently supported:
 - Type `Optional` of inlined complex classes.
 - Type `Literal` of strings.
 - Lists and tuples of both the primitive and inlined complex types.
+- Parameters can be renamed.
+- Parameter values can be loaded from a json or other file.
 - For other features please refer to the [documentation](https://jkulhanek.github.io/aclick).
 
 ## Installation

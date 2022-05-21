@@ -86,6 +86,7 @@ Documentation
    hierarchical-parsing
    inline-types
    parameter-renaming
+   loading-configuration
 
 
 API Reference
