@@ -562,7 +562,159 @@ def parse_json_configuration(fp):
 TSignature = t.TypeVar("TSignature", bound=inspect.Signature)
 
 
-def fill_signature_defaults_from_config(
+def from_dict(tp: t.Type, config: t.Any) -> t.Any:
+    """
+    Parses a nested dictionary structure into a specific type.
+    This performs the inverse operation to :func:`as_dict`.
+
+    :param tp: type to parse the dictionary into.
+    :param config: dictionary to parse to a specific type.
+    """
+    def inner(tp, sub_config, sub_path):
+        full_path = ".".join(sub_path)
+        if hasattr(tp, "from_str") and isinstance(sub_config, str):
+            return tp.from_str(sub_config)
+        elif getattr(tp, "__origin__", None) is list and isinstance(sub_config, (list, tuple)):
+            return tp.__origin__(from_dict(tp.__args__[0], x) for x in sub_config)
+        elif getattr(tp, "__origin__", None) is tuple and isinstance(sub_config, (list, tuple)):
+            return tp.__origin__(from_dict(local_tp, x) for local_tp, x in zip(tp.__args__, sub_config))
+        elif getattr(tp, "__origin__", None) in (dict, OrderedDict) and isinstance(sub_config, dict):
+            return tp.__origin__((from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v)) for k, v in sub_config.items())
+        elif getattr(tp, "__origin__", None) is t.Union:
+            if sub_config is None:
+                if type(None) not in tp.__args__:
+                    class_names = sorted(
+                        get_class_name(x) for x in tp.__args__
+                    )
+                    raise RuntimeError(
+                        f'Invalid value for parameter {full_path}. None is not in the list of supported classes: {", ".join(class_names)}'
+                    )
+                return None
+            elif (
+                sum(1 for x in tp.__args__ if x not in (type(None),)) == 1
+            ):
+                cls = next(
+                    x for x in tp.__args__ if x not in (type(None),)
+                )
+                return from_dict(cls, sub_config)
+
+            # Union type with specified class
+            elif isinstance(sub_config, dict) and "__class__" in sub_config:
+                class_name = sub_config.pop("__class__")
+                cls = next(
+                    (
+                        x
+                        for x in tp.__args__
+                        if get_class_name(x).replace("-", "_")
+                        == class_name.replace("-", "_")
+                    ),
+                    None,
+                )
+                if cls is None:
+                    class_names = sorted(
+                        get_class_name(x) for x in tp.__args__
+                    )
+                    raise RuntimeError(
+                        f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
+                    )
+                return from_dict(cls, sub_config)
+
+            elif any(isinstance(sub_config, x) for x in _SUPPORTED_TYPES) and any(
+                isinstance(sub_config, x) for x in tp.__args__
+            ):
+
+                return sub_config
+
+        elif tp in _SUPPORTED_TYPES or tp in (type(None),):
+            if not isinstance(sub_config, tp):
+                raise RuntimeError(
+                    f"Invalid type for parameter {full_path}, expected {tp} but found {type(sub_config)}"
+                )
+            return sub_config
+        elif (
+            getattr(tp, "__origin__", None) is Literal
+            and sub_config in tp.__args__
+        ):
+            return sub_config
+        elif callable(tp):
+            signature = _full_signature(tp)
+            new_args = []
+            new_kwargs = dict()
+            for p in signature.parameters.values():
+                if p.kind not in {
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY}:
+                    continue
+                if p.default is inspect._empty and p.name not in sub_config:
+                    raise RuntimeError(f'Cannot parse type {tp}. Missing key {".".join(sub_path + [p.name])}.')
+                value = sub_config.pop(p.name, p.default)
+                value = inner(p.annotation, value, sub_path + [p.name])
+                if p.kind == inspect.Parameter.POSITIONAL_ONLY:
+                    new_args.append(value)
+                else:
+                    new_kwargs[p.name] = value
+            return tp(*new_args, **new_kwargs)
+
+        raise RuntimeError(
+            f'Unsupported type for parameter {".".join(sub_path)}. The parameter has type {type(tp)} and the passed value was {sub_config}'
+        )
+    return inner(tp, config, [])
+
+
+def as_dict(obj: t.Any, tp: t.Optional[t.Type] = None) -> t.Any:
+    """
+    Returns a dictionary where all classes in the class structure are replaced with
+    simple dictionaries. It can be useful for serilization.
+
+    This performs the inverse operation to :func:`from_dict`.
+    Note that if ``tp`` is not a class the returned value may not be a dictionary
+    but any value.
+
+    :param obj: value that is used to generate the dictionary.
+    :param tp: type of the passed object. If no type is passes, the actual type of ``obj`` is used.
+    """
+    if tp is None:
+        tp = type(obj)
+    assert tp is not None  # typing fix
+
+    if tp in _SUPPORTED_TYPES or tp in (type(None),):
+        return obj
+    elif hasattr(tp, 'from_str'):
+        return str(obj)
+    elif getattr(tp, '__origin__', None) is Literal and type(obj) in _SUPPORTED_TYPES:
+        return obj
+    elif getattr(tp, '__origin__', None) is list:
+        return [as_dict(x, tp.__args__[0]) for x in obj]
+    elif getattr(tp, '__origin__', None) is tuple:
+        return [as_dict(x, local_tp) for x, local_tp in zip(obj, tp.__args__)]
+    elif getattr(tp, '__origin__', None) in (dict, OrderedDict):
+        return OrderedDict((k, as_dict(x, tp.__args__[1])) for k, x in obj.items())
+    elif getattr(tp, '__origin__', None) is t.Union:
+        types = tp.__args__
+        if obj is None:
+            if type(None) in types:
+                return None
+        elif all(_is_class(x) for x in types if x not in (type(None),)) and any(isinstance(obj, x) for x in types):
+            out_type = next(x for x in types if isinstance(obj, x))
+            out = as_dict(obj, out_type)
+            if sum(1 for x in types if x not in (type(None),) and _is_class(x)) > 1:
+                out['__class__'] = get_class_name(out_type)
+            return out
+        elif any(x for x in types if x in _SUPPORTED_TYPES and isinstance(obj, x)):
+            return next(x for x in types if x in _SUPPORTED_TYPES and isinstance(obj, x))
+
+    elif _is_class(tp):
+        out = OrderedDict()
+        for p in _full_signature(tp).parameters.values():
+            if not hasattr(obj, p.name):
+                raise RuntimeError(f'Cannot serialize type {tp} because the property {p.name} was not set in the constructor')
+            out[p.name] = as_dict(getattr(obj, p.name), p.annotation)
+        return out
+    raise RuntimeError(f'Cannot serialize type {tp} because it is not supported')
+
+
+def _fill_signature_defaults_from_dict(
     config: t.Dict[str, t.Any]
 ) -> t.Callable[[t.Callable], t.Callable]:
     def wrap(callable_function: t.Callable) -> t.Callable:
@@ -572,17 +724,25 @@ def fill_signature_defaults_from_config(
             if hasattr(p.annotation, "from_str") and isinstance(sub_config, str):
                 new_p = p.replace(default=p.annotation.from_str(sub_config))
             elif (
-                getattr(p.annotation, "__origin__", None)
-                in (
-                    list,
-                    tuple,
-                )
+                getattr(p.annotation, "__origin__", None) is list
                 and isinstance(sub_config, (list, tuple))
             ):
-                new_p = p.replace(default=list(sub_config))
+                new_p = p.replace(default=[from_dict(p.annotation.__args__[0], x) for x in sub_config])
+            elif (
+                getattr(p.annotation, "__origin__", None) is tuple
+                and isinstance(sub_config, (list, tuple))
+            ):
+                new_p = p.replace(default=tuple(from_dict(local_tp, x) for local_tp, x in zip(p.annotation.__args__, sub_config)))
+            elif (
+                getattr(p.annotation, "__origin__", None) in (dict, OrderedDict)
+                and isinstance(sub_config, dict)
+            ):
+                tp = p.annotation
+                new_p = p.replace(default=p.annotation.__origin__(
+                    (from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v)) for k, v in sub_config.items()))
             elif getattr(p.annotation, "__origin__", None) is t.Union:
                 if sub_config is None:
-                    if None not in p.annotation.__args__:
+                    if type(None) not in p.annotation.__args__:
                         class_names = sorted(
                             get_class_name(x) for x in p.annotation.__args__
                         )
@@ -619,7 +779,8 @@ def fill_signature_defaults_from_config(
                             f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
                         )
                     new_p = p.replace(
-                        annotation=_map_callable(cls, sub_config, sub_path)
+                        annotation=_map_callable(cls, sub_config, sub_path),
+                        default=inspect._empty,
                     )
                 # Union type without specified class
                 # We will restrict all members of union
@@ -631,7 +792,7 @@ def fill_signature_defaults_from_config(
                         for x in p.annotation.__args__
                         if x not in (type(None),)
                     )
-                    new_p = p.replace(annotation=t.Union[sub_types])
+                    new_p = p.replace(annotation=t.Union[sub_types], default=inspect._empty)
                 elif any(isinstance(sub_config, x) for x in _SUPPORTED_TYPES) and any(
                     isinstance(sub_config, x) for x in p.annotation.__args__
                 ):
@@ -644,7 +805,7 @@ def fill_signature_defaults_from_config(
                         default=sub_config,
                     )
 
-            elif p.annotation in _SUPPORTED_TYPES:
+            elif p.annotation in _SUPPORTED_TYPES or p.annotation in (type(None),):
                 if not isinstance(sub_config, p.annotation):
                     raise RuntimeError(
                         f"Invalid type for parameter {full_path}, expected {p.annotation} but found {type(sub_config)}"
@@ -657,7 +818,8 @@ def fill_signature_defaults_from_config(
                 new_p = p.replace(default=sub_config)
             elif _is_class(p.annotation):
                 new_p = p.replace(
-                    annotation=_map_callable(p.annotation, sub_config, sub_path)
+                    annotation=_map_callable(p.annotation, sub_config, sub_path),
+                    default=inspect._empty
                 )
 
             if new_p is None:
@@ -672,6 +834,11 @@ def fill_signature_defaults_from_config(
             was_default = False
             keyword_only = True
             for p in signature.parameters.values():
+                if p.kind not in {
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        inspect.Parameter.KEYWORD_ONLY}:
+                    continue
                 if p.name in config:
                     sub_path = path + [p.name]
                     sub_config = config.pop(p.name)
@@ -717,7 +884,8 @@ def fill_signature_defaults_from_config(
 
             setattr(out_fn, "__signature__", signature)
             out_fn.__doc__ = callable_function.__doc__
-            out_fn.__name__ = callable_function.__name__
+            if hasattr(callable_function, '__name__'):
+                out_fn.__name__ = callable_function.__name__
             if _is_class(callable_function):
 
                 class OutClass(callable_function):  # type: ignore
@@ -730,7 +898,8 @@ def fill_signature_defaults_from_config(
                 )
                 OutClass.__signature__ = signature
                 OutClass.__doc__ = callable_function.__doc__
-                OutClass.__name__ = callable_function.__name__
+                if hasattr(callable_function, '__name__'):
+                    OutClass.__name__ = callable_function.__name__
                 if hasattr(callable_function, "from_str"):
                     setattr(
                         OutClass, "from_str", getattr(callable_function, "from_str")
@@ -741,6 +910,8 @@ def fill_signature_defaults_from_config(
         return _map_callable(callable_function, config, [])
 
     return wrap
+
+
 
 
 def _merge_signatures(
@@ -1037,6 +1208,8 @@ def _build_examples(
             )
         elif cls in (type(None),):
             return _ClassArgument._escaped_str("None")
+        elif getattr(cls, "__origin__", None) is Literal and all(type(x) in _SUPPORTED_TYPES for x in cls.__args__):
+            return _ClassArgument._escaped_str("{" + "|".join(map(str, cls.__args__)) + "}")
         elif getattr(cls, "__origin__", None) is t.Union:
             return _switch_type(
                 inner(
@@ -1114,7 +1287,6 @@ def _build_examples(
                 class_name = class_name.replace("_", "-")
             return _ClassArgument(name=class_name, args=args, kwargs=kwargs)
         else:
-            breakpoint()
             raise RuntimeError(f"Type {type(cls)} is not supported")
 
     def expand_switch_types(class_structure):

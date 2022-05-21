@@ -7,7 +7,7 @@ from .utils import (
     _full_signature,
     _get_help_text,
     _wrap_fn_to_allow_kwargs_instead_of_args,
-    fill_signature_defaults_from_config as _fill_signature_defaults_from_config,
+    _fill_signature_defaults_from_dict,
 )
 
 
@@ -180,7 +180,7 @@ def configuration_option(
         with open(value) as fconfig:
             cfg = parse_configuration(fconfig)
             callback = getattr(command.callback, "__original_fn__", command.callback)
-            callback = _fill_signature_defaults_from_config(cfg)(callback)
+            callback = _fill_signature_defaults_from_dict(cfg)(callback)
             signature = _full_signature(callback)
             command.callback = _wrap_fn_to_allow_kwargs_instead_of_args(callback)
             command.callback_signature = signature

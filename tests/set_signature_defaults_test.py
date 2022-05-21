@@ -1,3 +1,4 @@
+import pytest
 import inspect
 import json
 import typing as t
@@ -6,7 +7,7 @@ from tempfile import NamedTemporaryFile
 
 import aclick
 
-from aclick.utils import _is_class, fill_signature_defaults_from_config, Literal
+from aclick.utils import _is_class, _fill_signature_defaults_from_dict, Literal
 
 from ._common import _call_fn_empty, click_test, click_test_error
 
@@ -19,35 +20,69 @@ def _store_config(cfg):
 
 
 def test_set_signature_defaults_simple_types():
-    @fill_signature_defaults_from_config(dict(a=6))
+    @_fill_signature_defaults_from_dict(dict(a=6))
     def fn(a: int = 5):
         assert a == 6
 
     fn()
 
-    @fill_signature_defaults_from_config(dict(a=6.1))
+    @_fill_signature_defaults_from_dict(dict(a=6.1))
     def fn(a: float = 5.1):
         assert a == 6.1
 
     fn()
 
-    @fill_signature_defaults_from_config(dict(a=False))
+    @_fill_signature_defaults_from_dict(dict(a=False))
     def fn(a: bool = True):
         assert a is False
 
     fn()
 
-    @fill_signature_defaults_from_config(dict(a="ok"))
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
     def fn(a: str = "fail"):
         assert a == "ok"
 
     fn()
 
-    @fill_signature_defaults_from_config(dict(a="ok"))
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
     def fn(a: Literal["ok", "fail"] = "fail"):
         assert a == "ok"
 
     fn()
+
+
+def test_from_dict_simple_types():
+    was_called = False
+    def fn(a: int = 5):
+        nonlocal was_called
+        was_called = True
+        assert a == 6
+
+    aclick.utils.from_dict(fn, dict(a=6))
+    assert was_called
+
+    def fn(a: float = 5.1):
+        assert a == 6.1
+
+    aclick.utils.from_dict(fn, dict(a=6.1))
+
+    @_fill_signature_defaults_from_dict(dict(a=False))
+    def fn(a: bool = True):
+        assert a is False
+
+    aclick.utils.from_dict(fn, dict(a=False))
+
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
+    def fn(a: str = "fail"):
+        assert a == "ok"
+
+    aclick.utils.from_dict(fn, dict(a='ok'))
+
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
+    def fn(a: Literal["ok", "fail"] = "fail"):
+        assert a == "ok"
+
+    aclick.utils.from_dict(fn, dict(a='ok'))
 
 
 def test_set_signature_defaults_class_type():
@@ -55,7 +90,7 @@ def test_set_signature_defaults_class_type():
     class A:
         a: str = "test"
 
-    @fill_signature_defaults_from_config(dict(a=dict(a="ok")))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a="ok")))
     def fn(a: A):
         assert isinstance(a, A)
         assert type(a) == A
@@ -70,7 +105,7 @@ def test_set_signature_defaults_class_type():
     class A:
         a: bool = False
 
-    @fill_signature_defaults_from_config(dict(a=dict(a=True)))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a=True)))
     def fn(a: A):
         assert isinstance(a, A)
         assert type(a) == A
@@ -82,12 +117,36 @@ def test_set_signature_defaults_class_type():
     _call_fn_empty(fn)
 
 
+def test_from_dict_class_type():
+    @dataclass
+    class A:
+        a: str = "test"
+
+    def fn(a: A):
+        assert isinstance(a, A)
+        assert type(a) == A
+        assert a.a == "ok"
+
+    aclick.utils.from_dict(fn, dict(a=dict(a="ok")))
+
+    @dataclass
+    class A:
+        a: bool = False
+
+    def fn(a: A):
+        assert isinstance(a, A)
+        assert type(a) == A
+        assert a.a is True
+
+    aclick.utils.from_dict(fn, dict(a=dict(a=True)))
+
+
 def test_set_signature_defaults_optional_type():
     @dataclass
     class A:
         a: t.Optional[str] = None
 
-    @fill_signature_defaults_from_config(dict(a=dict(a="ok")))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a="ok")))
     def fn(a: A):
         assert isinstance(a, A)
         assert type(a) == A
@@ -98,26 +157,57 @@ def test_set_signature_defaults_optional_type():
     assert issubclass(sig.parameters["a"].annotation, A)
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a="ok"))
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
     def fn(a: t.Optional[str]):
         assert a == "ok"
         assert isinstance(a, str)
 
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a=dict()))
+    @_fill_signature_defaults_from_dict(dict(a=dict()))
     def fn(a: t.Optional[A]):
         assert a is not None
         assert a.a is None
 
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a=dict(a="ok")))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a="ok")))
     def fn(a: t.Optional[A]):
         assert a is not None
         assert a.a == "ok"
 
     _call_fn_empty(fn)
+
+
+def test_from_dict_optional_type():
+    @dataclass
+    class A:
+        a: t.Optional[str] = None
+
+    def fn(a: A):
+        assert isinstance(a, A)
+        assert type(a) == A
+        assert a.a == "ok"
+
+    aclick.utils.from_dict(fn, dict(a=dict(a='ok')))
+
+    def fn(a: t.Optional[str]):
+        assert a == "ok"
+        assert isinstance(a, str)
+
+    aclick.utils.from_dict(fn, dict(a='ok'))
+
+    def fn(a: t.Optional[A]):
+        assert a is not None
+        assert a.a is None
+
+    aclick.utils.from_dict(fn, dict(a=dict()))
+
+    def fn(a: t.Optional[A]):
+        assert a is not None
+        assert a.a == "ok"
+
+    aclick.utils.from_dict(fn, dict(a=dict(a="ok")))
 
 
 def test_set_signature_defaults_union_type():
@@ -125,7 +215,7 @@ def test_set_signature_defaults_union_type():
     class A:
         a: t.Union[str, int] = None
 
-    @fill_signature_defaults_from_config(dict(a=dict(a="ok")))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a="ok")))
     def fn(a: A):
         assert isinstance(a, A)
         assert type(a) == A
@@ -136,7 +226,7 @@ def test_set_signature_defaults_union_type():
     assert issubclass(sig.parameters["a"].annotation, A)
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a=dict(a=3)))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a=3)))
     def fn(a: A):
         assert isinstance(a, A)
         assert type(a) == A
@@ -147,14 +237,14 @@ def test_set_signature_defaults_union_type():
     assert issubclass(sig.parameters["a"].annotation, A)
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a="ok"))
+    @_fill_signature_defaults_from_dict(dict(a="ok"))
     def fn(a: t.Union[str, int]):
         assert a == "ok"
         assert isinstance(a, str)
 
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a=3))
+    @_fill_signature_defaults_from_dict(dict(a=3))
     def fn(a: t.Union[str, int]):
         assert a == 3
         assert isinstance(a, int)
@@ -177,7 +267,7 @@ def test_set_signature_defaults_union_class_type():
         def _get_class_name(cls):
             return "c"
 
-    @fill_signature_defaults_from_config(dict(a=dict(__class__="c", a="ok", b=4)))
+    @_fill_signature_defaults_from_dict(dict(a=dict(__class__="c", a="ok", b=4)))
     def fn(a: t.Union[A, B]):
         assert isinstance(a, B)
         assert type(a) == B
@@ -190,7 +280,7 @@ def test_set_signature_defaults_union_class_type():
     assert issubclass(sig.parameters["a"].annotation, B)
     _call_fn_empty(fn)
 
-    @fill_signature_defaults_from_config(dict(a=dict(a="ok")))
+    @_fill_signature_defaults_from_dict(dict(a=dict(a="ok")))
     def fn(a: t.Union[A, B]):
         pass
 
@@ -200,6 +290,37 @@ def test_set_signature_defaults_union_class_type():
     for i, c in enumerate(sig.parameters["a"].annotation.__args__):
         assert c().a == "ok"
     assert i == 1
+
+
+def test_from_dict_union_class_type():
+    @dataclass
+    class A:
+        a: str = "test"
+
+    @dataclass
+    class B:
+        a: str = "passed"
+        b: int = 3
+        c: int = 2
+
+        @classmethod
+        def _get_class_name(cls):
+            return "c"
+
+    def fn(a: t.Union[A, B]):
+        assert isinstance(a, B)
+        assert type(a) == B
+        assert a.a == "ok"
+        assert a.b == 4
+        assert a.c == 2
+
+    aclick.utils.from_dict(fn, dict(a=dict(__class__="c", a="ok", b=4)))
+
+    with pytest.raises(RuntimeError):
+        def fn(a: t.Union[A, B]):
+            pass
+
+        aclick.utils.from_dict(fn, dict(a=dict(a="ok")))
 
 
 def test_config_option(monkeypatch):

@@ -426,3 +426,16 @@ def test_build_examples():
             (None, aclick.utils._ClassArgument._escaped_str('...')),
         ])
     ]
+
+
+def test_as_dict_hierarchical_type():
+    @dataclass
+    class A:
+        a: str
+
+    @dataclass
+    class B:
+        a: A
+
+    out = aclick.utils.as_dict(B(A('test')))
+    assert out == OrderedDict([('a', OrderedDict([('a', 'test')]))])
