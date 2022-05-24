@@ -351,7 +351,7 @@ class Command(_click.Command):
             else:
                 return cls(option_name, **kwargs)
         raise ValueError(
-            "Could not build a Click parameter for parameter with name: {full_name} and type: {p.annotation}"
+            f"Could not build a Click parameter for parameter with name: {full_name} and type: {parameter_type}"
         )
 
     def _assert_signature_is_supported(
