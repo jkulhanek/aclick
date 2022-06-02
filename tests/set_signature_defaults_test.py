@@ -1,4 +1,3 @@
-import pytest
 import inspect
 import json
 import typing as t
@@ -6,14 +5,16 @@ from dataclasses import dataclass
 from tempfile import NamedTemporaryFile
 
 import aclick
+import pytest
 
-from aclick.utils import _is_class, _fill_signature_defaults_from_dict, Literal
+from aclick.utils import _fill_signature_defaults_from_dict, _is_class, Literal
 
 from ._common import _call_fn_empty, click_test, click_test_error
 
 
-def _store_config(cfg):
-    file = NamedTemporaryFile("w+")
+def _store_config(cfg, type="json"):
+    file = NamedTemporaryFile("w+", suffix=f".{type}")
+    assert type == "json"
     json.dump(cfg, file)
     file.flush()
     return file
@@ -53,6 +54,7 @@ def test_set_signature_defaults_simple_types():
 
 def test_from_dict_simple_types():
     was_called = False
+
     def fn(a: int = 5):
         nonlocal was_called
         was_called = True
@@ -76,13 +78,13 @@ def test_from_dict_simple_types():
     def fn(a: str = "fail"):
         assert a == "ok"
 
-    aclick.utils.from_dict(fn, dict(a='ok'))
+    aclick.utils.from_dict(fn, dict(a="ok"))
 
     @_fill_signature_defaults_from_dict(dict(a="ok"))
     def fn(a: Literal["ok", "fail"] = "fail"):
         assert a == "ok"
 
-    aclick.utils.from_dict(fn, dict(a='ok'))
+    aclick.utils.from_dict(fn, dict(a="ok"))
 
 
 def test_set_signature_defaults_class_type():
@@ -189,13 +191,13 @@ def test_from_dict_optional_type():
         assert type(a) == A
         assert a.a == "ok"
 
-    aclick.utils.from_dict(fn, dict(a=dict(a='ok')))
+    aclick.utils.from_dict(fn, dict(a=dict(a="ok")))
 
     def fn(a: t.Optional[str]):
         assert a == "ok"
         assert isinstance(a, str)
 
-    aclick.utils.from_dict(fn, dict(a='ok'))
+    aclick.utils.from_dict(fn, dict(a="ok"))
 
     def fn(a: t.Optional[A]):
         assert a is not None
@@ -317,6 +319,7 @@ def test_from_dict_union_class_type():
     aclick.utils.from_dict(fn, dict(a=dict(__class__="c", a="ok", b=4)))
 
     with pytest.raises(RuntimeError):
+
         def fn(a: t.Union[A, B]):
             pass
 

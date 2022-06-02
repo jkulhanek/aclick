@@ -2,12 +2,17 @@ import typing as t
 
 import click as _click
 
+from aclick.configuration import (
+    parse_configuration as _parse_configuration,
+    ParseConfigurationContext,
+)
+
 from .core import _AClickContext, Command, Group
 from .utils import (
+    _fill_signature_defaults_from_dict,
     _full_signature,
     _get_help_text,
     _wrap_fn_to_allow_kwargs_instead_of_args,
-    _fill_signature_defaults_from_dict,
 )
 
 
@@ -154,7 +159,7 @@ def group(
 
 def configuration_option(
     *param_decls: str,
-    parse_configuration: t.Optional[t.Callable[[t.Any], t.Dict[str, t.Any]]] = None,
+    parse_configuration: t.Optional[t.Callable[..., t.Dict[str, t.Any]]] = None,
     **kwargs: t.Any,
 ) -> t.Callable[[F], F]:
     """
@@ -168,9 +173,7 @@ def configuration_option(
     """
 
     if parse_configuration is None:
-        from .utils import parse_json_configuration
-
-        parse_configuration = parse_json_configuration
+        parse_configuration = _parse_configuration
 
     def callback(ctx, param, value: str) -> None:
         assert parse_configuration is not None
@@ -180,7 +183,9 @@ def configuration_option(
 
         command = ctx.command
         with open(value) as fconfig:
-            cfg = parse_configuration(fconfig)
+            cfg = parse_configuration(
+                fconfig, context=ParseConfigurationContext(fn=command.callback)
+            )
             callback = getattr(command.callback, "__original_fn__", command.callback)
             callback = _fill_signature_defaults_from_dict(cfg)(callback)
             signature = _full_signature(callback)
