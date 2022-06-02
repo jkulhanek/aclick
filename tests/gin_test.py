@@ -1,8 +1,19 @@
 import typing as t
 from dataclasses import dataclass
 
+import pytest
+
 from aclick.configuration import parse_configuration, ParseConfigurationContext
 from aclick.utils import from_dict
+
+try:
+    import gin
+    import gin.config
+except ImportError:
+    pytest.skip(
+        "Gin tests were skipped because the gin-config module is not installed",
+        allow_module_level=True,
+    )
 
 
 def test_gin_config(tmp_path):
@@ -61,6 +72,34 @@ fn2.b = "ok"
     assert out[:2] == (1, "ok")
     assert isinstance(out[-1], A)
     assert out[-1].c == "pass"
+    gin.clear_config()
+
+    @gin.configurable
+    def fn2b(cls: A, clsb: A):
+        return (cls, clsb)
+
+    with open(tmp_path / "conf.gin", "w+") as f:
+        f.write(
+            """
+fn2b.cls = @type1/A
+fn2b.clsb = @type2/A
+type1/A.c = "pass"
+type2/A.c = "passB"
+        """
+        )
+
+    with open(tmp_path / "conf.gin") as fp:
+        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn2b))
+
+    assert cfg == dict(cls=dict(c="pass"), clsb=dict(c="passB"))
+
+    allow_call = True
+    out = from_dict(fn2b, cfg)
+    assert isinstance(out[0], A)
+    assert isinstance(out[1], A)
+    assert out[0].c == "pass"
+    assert out[1].c == "passB"
+    gin.clear_config()
 
 
 def test_gin_config_union_class(tmp_path):
@@ -143,3 +182,31 @@ fn4.cls = None
     out = from_dict(fn4, cfg)
     assert out[-1] is None
     gin.clear_config()
+
+
+def test_gin_external_configurable(tmp_path):
+    @dataclass
+    class E:
+        val1: str
+
+    @gin.configurable
+    def fn5(e: E):
+        return e
+
+    gin.config.external_configurable(E, module="tst")
+    with open(tmp_path / "conf.gin", "w+") as f:
+        f.write(
+            """
+E.val1 = "pass"
+fn5.e = @tst.E
+        """
+        )
+
+    with open(tmp_path / "conf.gin") as fp:
+        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn5))
+
+    assert cfg == dict(e=dict(val1="pass"))
+
+    out = from_dict(fn5, cfg)
+    assert isinstance(out, E)
+    assert out.val1 == "pass"
