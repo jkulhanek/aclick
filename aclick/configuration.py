@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from .utils import _full_signature, get_class_name
 
 
-_CONFIGURATION_PROVIDERS: OrderedDict[str, t.Callable] = OrderedDict()
+_CONFIGURATION_PROVIDERS: t.OrderedDict[str, t.Callable] = OrderedDict()
 TCallable = t.TypeVar("TCallable", bound=t.Callable)
 
 
