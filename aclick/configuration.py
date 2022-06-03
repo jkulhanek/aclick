@@ -96,6 +96,10 @@ def parse_gin_configuration(fp, *, context: ParseConfigurationContext):
             assert tp is not None
             if getattr(tp, "__origin__", None) is t.Union:
                 props["__class__"] = get_class_name(config.configurable.wrapped)
+            if not config.evaluate:
+                raise RuntimeError(
+                    f"For argument of type {tp} the value must be an instance, not a factory. Replace {config.selector} with {config.selector}()"
+                )
             return props
         elif isinstance(config, dict):
             signature = _full_signature(tp)

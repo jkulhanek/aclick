@@ -56,7 +56,7 @@ def test_gin_config_class(tmp_path):
         f.write(
             """
 A.c = "pass"
-fn2.cls = @A
+fn2.cls = @A()
 fn2.a = 1
 fn2.b = "ok"
         """
@@ -74,6 +74,23 @@ fn2.b = "ok"
     assert out[-1].c == "pass"
     gin.clear_config()
 
+    # class has to be an instance
+    with open(tmp_path / "conf.gin", "w+") as f:
+        f.write(
+            """
+A.c = "pass"
+fn2.cls = @A
+fn2.a = 1
+fn2.b = "ok"
+        """
+        )
+
+    with pytest.raises(RuntimeError) as errinfo:
+        with open(tmp_path / "conf.gin") as fp:
+            cfg = parse_configuration(fp, context=ParseConfigurationContext(fn2))
+    gin.clear_config()
+    assert "must be an instance" in str(errinfo.value)
+
     @gin.configurable
     def fn2b(cls: A, clsb: A):
         return (cls, clsb)
@@ -81,8 +98,8 @@ fn2.b = "ok"
     with open(tmp_path / "conf.gin", "w+") as f:
         f.write(
             """
-fn2b.cls = @type1/A
-fn2b.clsb = @type2/A
+fn2b.cls = @type1/A()
+fn2b.clsb = @type2/A()
 type1/A.c = "pass"
 type2/A.c = "passB"
         """
@@ -125,7 +142,7 @@ def test_gin_config_union_class(tmp_path):
         f.write(
             """
 B.c = "pass"
-fn3.cls = @B
+fn3.cls = @B()
 fn3.a = 1
 fn3.b = "ok"
         """
@@ -150,7 +167,7 @@ fn3.b = "ok"
         f.write(
             """
 B.c = "pass"
-fn4.cls = @B
+fn4.cls = @B()
         """
         )
 
@@ -198,7 +215,7 @@ def test_gin_external_configurable(tmp_path):
         f.write(
             """
 E.val1 = "pass"
-fn5.e = @tst.E
+fn5.e = @tst.E()
         """
         )
 
