@@ -122,6 +122,7 @@ The output will look as follows:
 
     invoke(train, args=['--model', 'model-b(num-layers=3)'], prog_name='python train.py')
 
+.. _container-types:
 
 Container types
 ---------------

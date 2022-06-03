@@ -170,7 +170,9 @@ Lists and dictionaries can be uses as parameters in aclick.
 For the dictionaries, the key has to be a string. The values
 contained in the list or dictionary can be any basic type like
 `str`, `float`, `bool`, `int`, but it can also be a complex structure
-of classes, see :doc:`inline types <inline-types>`. We will demonstrate
+of classes, see :doc:`inline types <inline-types>`.
+See also :ref:`container types <container-types>`.
+We will demonstrate
 the usage in the following example.
 
 .. click:example::
