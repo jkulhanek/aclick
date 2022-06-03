@@ -3,6 +3,7 @@ import inspect
 import re
 import typing as t
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 
 import click as _click
 
@@ -10,6 +11,7 @@ from .types import (
     _AClickContext,
     ClassHierarchicalOption,
     ClassUnion,
+    Dict as DictParam,
     List,
     OptionalTypeHierarchicalOption,
     ParameterGroup,
@@ -329,9 +331,25 @@ class Command(_click.Command):
                 and isinstance(kwargs["default"], list)
             ):
                 kwargs["show_default"] = _class_to_str_with_dashes_option(
-                    kwargs["default"]
+                    kwargs["default"], use_dashes=self.use_dashes
                 )[1:-1]
             return cls(option_name, **kwargs)
+        if getattr(parameter_type, "__origin__", None) in (dict, OrderedDict):
+            key_type, value_type = parameter_type.__args__
+            container_type = parameter_type.__origin__
+            if key_type is str:
+                kwargs["type"] = DictParam(
+                    value_type, key_type=key_type, container_type=container_type
+                )
+                if (
+                    "default" in kwargs
+                    and kwargs.get("show_default", False)
+                    and isinstance(kwargs["default"], (dict, OrderedDict))
+                ):
+                    kwargs["show_default"] = _class_to_str_with_dashes_option(
+                        kwargs["default"], use_dashes=self.use_dashes
+                    )[1:-1]
+                return cls(option_name, **kwargs)
         if getattr(parameter_type, "__origin__", None) is tuple:
             kwargs["type"] = Tuple(list(parameter_type.__args__))
             return cls(option_name, **kwargs)

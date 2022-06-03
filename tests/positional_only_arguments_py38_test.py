@@ -151,6 +151,15 @@ def test_list_of_dataclasses_argument(a: List[D1], /):
     assert a[1].test == "passed as, well"
 
 
+@click_test("p1=d1(\"passed\"),p2=d1('passed as, well')")
+def test_dict_of_dataclasses_argument(a: t.Dict[str, D1], /):
+    assert len(a) == 2
+    assert isinstance(a["p1"], D1)
+    assert a["p1"].test == "passed"
+    assert isinstance(a["p2"], D1)
+    assert a["p2"].test == "passed as, well"
+
+
 @click_test("d1(\"passed\"),d2('passed as, well')")
 def test_list_of_union_of_dataclasses_argument(a: List[t.Union[D1, D2]], /):
     assert len(a) == 2

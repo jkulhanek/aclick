@@ -97,7 +97,6 @@ class B:
         int,
         float,
         bool,
-        type(None),
         aclick.utils.Literal["ok", "fail"],
         A,
         B,
@@ -108,7 +107,6 @@ class B:
         t.OrderedDict[str, A],
         t.Optional[A],
         t.Optional[B],
-        t.Literal[2, 3],
     ],
 )
 def test_type(tp):
@@ -134,10 +132,41 @@ def test_type(tp):
         assert example_instance2 == example_instance
         assert was_called
 
-    # @aclick.command
-    # def _command(a: tp):
-    #     pass
+    @aclick.command
+    def _command(a: tp):
+        pass
 
-    # @aclick.command(hierarchical=False)
-    # def _command(a: tp):
-    #     pass
+    @aclick.command(hierarchical=False)
+    def _command1(a: tp):
+        pass
+
+
+@pytest.mark.parametrize(
+    "tp",
+    [
+        aclick.utils.Literal[2, 3],
+        type(None),
+    ],
+)
+def test_additional_types(tp):
+    assert len(aclick.utils.build_examples(tp, use_dashes=True)) > 0
+    assert len(aclick.utils.build_examples(tp, use_dashes=False)) > 0
+
+    default_instance = next(iter(_construct_type_examples(tp)))
+
+    for example_instance in _construct_type_examples(tp):
+        example_dict = aclick.utils.as_dict(example_instance, tp)
+        was_called = False
+
+        @aclick.utils._fill_signature_defaults_from_dict(
+            dict(a=copy.deepcopy(example_dict))
+        )
+        def fn(a: tp = default_instance):
+            nonlocal was_called
+            assert a == example_instance
+            was_called = True
+
+        _call_fn_empty(fn)
+        example_instance2 = aclick.utils.from_dict(tp, example_dict)
+        assert example_instance2 == example_instance
+        assert was_called
