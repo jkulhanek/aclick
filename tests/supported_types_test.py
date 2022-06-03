@@ -108,7 +108,7 @@ class B:
         t.OrderedDict[str, A],
         t.Optional[A],
         t.Optional[B],
-        t.Literal[2, 3],
+        aclick.utils.Literal[2, 3],
     ],
 )
 def test_type(tp):
