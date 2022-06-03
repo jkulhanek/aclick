@@ -1,5 +1,6 @@
 from . import _version, core, types, utils
 from ._version import __version__  # noqa: F401
+from .configuration import parse_configuration  # noqa: F401
 from .core import (  # noqa: F401
     Command,
     FlattenParameterRenamer,
