@@ -3,13 +3,14 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import typing as t
+from dataclasses import dataclass
 from functools import partial
 
 import aclick
-from dataclasses import dataclass
-import typing as t
 
 import click
+import gin
 from click.testing import CliRunner, EchoingStdin
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -67,7 +68,14 @@ def patch_modules():
 class ExampleRunner(CliRunner):
     def __init__(self):
         super().__init__(echo_stdin=True)
-        self.namespace = {"click": click, "dataclass": dataclass, "t": t, "aclick": aclick, "__file__": "dummy.py"}
+        self.namespace = {
+            "click": click,
+            "dataclass": dataclass,
+            "t": t,
+            "gin": gin,
+            "aclick": aclick,
+            "__file__": "dummy.py",
+        }
 
     @contextlib.contextmanager
     def isolation(self, *args, **kwargs):
