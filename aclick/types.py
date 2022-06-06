@@ -1,5 +1,6 @@
 import inspect
 import typing as t
+from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 import click as _click
@@ -136,6 +137,62 @@ class List(_click.ParamType):
         return [self.inner_type.convert(x, param, ctx) for x in values]
 
 
+class Dict(_click.ParamType):
+    """This type parses a dict or OrderedDict of values.
+    This type supports inline class parsing.
+    A complicated structure of classes can be parsed
+    using this type.
+    See :func:`parse_class_structure`.
+    The key, however, is always a str.
+
+
+    :param inner_type: Type of the objects in the dict.
+    :param key_type: Type of the key in the dict. Currently, only str is supported.
+    :param container_type: Type dict container. It can be either dict or OrderedDict.
+                           The default value is OrderedDict.
+    """
+
+    name = "dict"
+
+    def __init__(
+        self,
+        inner_type: t.Type,
+        key_type: t.Type = t.Type[str],
+        container_type: t.Type = OrderedDict,
+    ):
+        assert key_type is str
+        assert container_type in {OrderedDict, dict}
+        self.inner_type = convert_type(inner_type)
+        self.key_type = key_type
+        self.container_type = container_type
+        self.name = f"dict of {self.inner_type.name}s"
+
+    def __repr__(self) -> str:
+        class_name = "ORDERED DICT" if self.inner_type is OrderedDict else "DICT"
+        return f"{class_name}[{repr(self.key_type)},{repr(self.inner_type)}]"
+
+    def convert(
+        self,
+        value: t.Any,
+        param: t.Optional[_click.Parameter],
+        ctx: t.Optional[_click.Context],
+    ) -> t.Any:
+        if isinstance(value, self.container_type):
+            return value
+        assert isinstance(value, str)
+        class_argument = _ClassArgument.from_str(f"dict({{{value}}})")
+        assert len(class_argument.args) == 1
+        assert not class_argument.kwargs
+        dict_values = class_argument.args[0]
+        assert isinstance(dict_values, OrderedDict)
+        return self.container_type(
+            (
+                (k, self.inner_type.convert(str(v), param, ctx))
+                for k, v in dict_values.items()
+            )
+        )
+
+
 class ClassUnion(_click.ParamType):
     """This type parses the string value as the instance of
     one of specified classes. A complicated structure of
@@ -212,6 +269,8 @@ def convert_type(ty: t.Optional[t.Any], default: t.Optional[t.Any] = None) -> Pa
         return ClassUnion(classes)
     if ty is not None and getattr(ty, "__origin__", None) is list:
         return List(ty.__args__[0])
+    if ty is not None and getattr(ty, "__origin__", None) in (dict, OrderedDict):
+        return Dict(*ty.__args__)
     return _click.types.convert_type(ty, default)
 
 

@@ -116,6 +116,44 @@ def test_list_of_str_help(e, a: List[str]):
     assert "LIST OF TEXTS" in msg
 
 
+@click_test("--a", "p1=test,p2=test2")
+def test_dict_of_str(a: t.Dict[str, str]):
+    assert len(a) == 2
+    assert a["p1"] == "test"
+    assert a["p2"] == "test2"
+
+
+@click_test("--a", "p1=test,p2=test2")
+def test_optional_dict_of_str(a: t.Optional[t.Dict[str, str]] = None):
+    assert a is not None
+    assert len(a) == 2
+    assert a["p1"] == "test"
+    assert a["p2"] == "test2"
+
+
+@click_test()
+def test_optional_dict_of_str2(a: t.Optional[t.Dict[str, str]] = None):
+    assert a is None
+
+
+@click_test("--b", "1", "p1=test,p2=test2")
+def test_tuple_of_dict_of_str(b: t.Tuple[int, t.Dict[str, str]]):
+    assert len(b) == 2
+    assert b[0] == 1
+
+    a = b[1]
+    assert len(a) == 2
+    assert a["p1"] == "test"
+    assert a["p2"] == "test2"
+
+
+@click_test_error("--help")
+def test_dict_of_str_help(e, a: t.Dict[str, str]):
+    status, msg = e
+    assert status == 0
+    assert "DICT OF TEXTS" in msg
+
+
 @click_test("--a", "\"test,\\\"' failed\",'test2, )\\'\" pased',ok")
 def test_list_of_str2(a: List[str]):
     assert len(a) == 3

@@ -161,3 +161,36 @@ The `cli` group is then used as the entrypoint::
 
     if __name__ == '__main__':
         cli()
+
+
+Lists and Dictionaries
+----------------------
+
+Lists and dictionaries can be uses as parameters in aclick.
+For the dictionaries, the key has to be a string. The values
+contained in the list or dictionary can be any basic type like
+`str`, `float`, `bool`, `int`, but it can also be a complex structure
+of classes, see :doc:`inline types <inline-types>`.
+See also :ref:`container types <container-types>`.
+We will demonstrate
+the usage in the following example.
+
+.. click:example::
+
+    @dataclass
+    class Person:
+        name: str
+    
+
+    @aclick.command
+    def main(list: t.List[Person], age: t.Dict[str, int]):
+        for p in list:
+            p_age = age[p.name]
+            print(f'    {p.name} is {p_age} years old')
+
+
+Which we can call as follows:
+
+.. click:run::
+
+    invoke(main, args=['--list', 'person(Alice),person(Bob)', '--age', 'Alice=21,Bob=53'], prog_name='python main.py')
