@@ -33,7 +33,7 @@ class ParameterWithDescription(inspect.Parameter):
     :attr description: String description of the parameter.
     """
 
-    __slots__ = inspect.Parameter.__slots__ + ("description",)
+    __slots__ = tuple(inspect.Parameter.__slots__) + ("description",)
 
     def __init__(self, *args, description: t.Optional[str] = None, **kwargs):
         """
@@ -82,13 +82,13 @@ class ParameterWithDescription(inspect.Parameter):
         return hash((super().__hash__(), self.description))
 
     def __reduce__(self):
-        tp, args, kwargs = super().__reduce__()
+        tp, args, kwargs = super().__reduce__()  # type: ignore
         kwargs["description"] = self.description
         return tp, args, kwargs
 
     def __setstate__(self, state):
         self.description = description = state.pop("description")
-        super().__setstate__(state)
+        super().__setstate__(state)  # type: ignore
         state["description"] = description
 
     def replace(self, *, description=inspect._empty, **kwargs):
@@ -119,7 +119,10 @@ class SignatureWithDescription(inspect.Signature):
     :attr long_description: Long description of the function.
     """
 
-    __slots__ = inspect.Signature.__slots__ + ("short_description", "long_description")
+    __slots__ = tuple(inspect.Signature.__slots__) + (
+        "short_description",
+        "long_description",
+    )
 
     def __init__(
         self,
@@ -179,7 +182,7 @@ class SignatureWithDescription(inspect.Signature):
         return hash((super().__hash__(), self.long_description, self.short_description))
 
     def __reduce__(self):
-        tp, args, kwargs = super().__reduce__()
+        tp, args, kwargs = super().__reduce__()  # type: ignore
         kwargs["long_description"] = self.long_description
         kwargs["short_description"] = self.short_description
         return tp, args, kwargs
@@ -187,7 +190,7 @@ class SignatureWithDescription(inspect.Signature):
     def __setstate__(self, state):
         self.long_description = long_description = state.pop("long_description")
         self.short_description = short_description = state.pop("short_description")
-        super().__setstate__(state)
+        super().__setstate__(state)  # type: ignore
         state["long_description"] = long_description
         state["short_description"] = short_description
 

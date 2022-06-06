@@ -2,22 +2,13 @@ import os
 import re
 import typing as t
 from collections import OrderedDict
-from dataclasses import dataclass
 
+from .core import Context
 from .utils import _full_signature, get_class_name
 
 
 _CONFIGURATION_PROVIDERS: t.OrderedDict[str, t.Callable] = OrderedDict()
 TCallable = t.TypeVar("TCallable", bound=t.Callable)
-
-
-@dataclass
-class ParseConfigurationContext:
-    """
-    :param fn: Callback that will use the parsed parameters.
-    """
-
-    fn: t.Callable
 
 
 def register_configuration_provider(regex: str) -> t.Callable[[TCallable], TCallable]:
@@ -34,7 +25,7 @@ def register_configuration_provider(regex: str) -> t.Callable[[TCallable], TCall
     return wrap
 
 
-def parse_configuration(fp, *, context: ParseConfigurationContext):
+def parse_configuration(fp, *, ctx: Context):
     '''
     Parses the configuration file using one of the supported configuration providers.
 
@@ -62,11 +53,11 @@ def parse_configuration(fp, *, context: ParseConfigurationContext):
         for i, provider in enumerate(_CONFIGURATION_PROVIDERS.values())
         if found_pattern_dict[f"pp{i}"]
     )
-    return found_provider(fp, context=context)
+    return found_provider(fp, ctx=ctx)
 
 
 @register_configuration_provider(r".*\.json")
-def parse_json_configuration(fp, *, context: ParseConfigurationContext):
+def parse_json_configuration(fp, *, ctx: Context):
     """
     Loads a configuration stored in a json file
 
@@ -79,7 +70,7 @@ def parse_json_configuration(fp, *, context: ParseConfigurationContext):
 
 
 @register_configuration_provider(r".*\.gin")
-def parse_gin_configuration(fp, *, context: ParseConfigurationContext):
+def parse_gin_configuration(fp, *, ctx: Context):
     """
     Loads a configuration stored as a gin config file
 
@@ -115,14 +106,14 @@ def parse_gin_configuration(fp, *, context: ParseConfigurationContext):
         filename=fp.name, imports=imports, includes=includes
     )
     gin.config.log_includes_and_imports(results)
-    gin_callback: t.Optional[t.Callable] = context.fn
+    gin_callback: t.Optional[t.Callable] = ctx.callback
     while gin_callback is not None:
         if gin_callback in gin.config._INVERSE_REGISTRY:
             break
         gin_callback = getattr(gin_callback, "__wrapped__", None)
     else:
         raise RuntimeError(
-            f"Class of function {context.fn} was not registered with gin"
+            f"Class of function {ctx.callback} was not registered with gin"
         )
     config = gin.config.get_bindings(gin_callback, resolve_references=False)
-    return fix_config(config, context.fn)
+    return fix_config(config, ctx.callback)

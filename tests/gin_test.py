@@ -1,9 +1,11 @@
 import typing as t
 from dataclasses import dataclass
 
-import pytest
+import click
 
-from aclick.configuration import parse_configuration, ParseConfigurationContext
+import pytest
+from aclick import Context
+from aclick.configuration import parse_configuration
 from aclick.utils import from_dict
 
 try:
@@ -32,7 +34,7 @@ fn.b = "ok"
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn))
 
     assert cfg == dict(a=1, b="ok")
 
@@ -63,7 +65,7 @@ fn2.b = "ok"
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn2))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn2))
 
     assert cfg == dict(a=1, b="ok", cls=dict(c="pass"))
 
@@ -87,7 +89,9 @@ fn2.b = "ok"
 
     with pytest.raises(RuntimeError) as errinfo:
         with open(tmp_path / "conf.gin") as fp:
-            cfg = parse_configuration(fp, context=ParseConfigurationContext(fn2))
+            cfg = parse_configuration(
+                fp, ctx=Context(click.Command("tmp"), callback=fn2)
+            )
     gin.clear_config()
     assert "must be an instance" in str(errinfo.value)
 
@@ -106,7 +110,7 @@ type2/A.c = "passB"
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn2b))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn2b))
 
     assert cfg == dict(cls=dict(c="pass"), clsb=dict(c="passB"))
 
@@ -149,7 +153,7 @@ fn3.b = "ok"
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn3))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn3))
 
     assert cfg == dict(a=1, b="ok", cls=dict(__class__="b", c="pass"))
 
@@ -172,7 +176,7 @@ fn4.cls = @B()
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn4))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn4))
 
     assert cfg == dict(cls=dict(__class__="b", c="pass"))
 
@@ -191,7 +195,7 @@ fn4.cls = None
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn4))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn4))
 
     assert cfg == dict(cls=None)
 
@@ -220,7 +224,7 @@ fn5.e = @tst.E()
         )
 
     with open(tmp_path / "conf.gin") as fp:
-        cfg = parse_configuration(fp, context=ParseConfigurationContext(fn5))
+        cfg = parse_configuration(fp, ctx=Context(click.Command("tmp"), callback=fn5))
 
     assert cfg == dict(e=dict(val1="pass"))
 

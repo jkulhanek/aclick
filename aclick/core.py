@@ -39,15 +39,21 @@ class Context(_click.Context):
     def __init__(
         self,
         *args,
-        callback_signature: inspect.Signature,
-        callback: t.Optional[t.Callable],
+        callback_signature: t.Optional[inspect.Signature] = None,
+        callback: t.Optional[t.Callable] = None,
         param_groups: t.Optional[t.List[ParameterGroup]] = None,
         param_group_contexts: t.Optional[t.Dict[str, t.Any]] = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.callback = callback
-        self.callback_signature = callback_signature
+        if callback_signature is None:
+            assert (
+                callback is not None
+            ), "Either callback or callback_signature must be specified"
+            self.callback_signature: inspect.Signature = _full_signature(callback)
+        else:
+            self.callback_signature = callback_signature
         self.param_groups = param_groups or []
         self.param_group_contexts = param_group_contexts or dict()
         self.configuration_file_loaded: t.Optional[str] = None

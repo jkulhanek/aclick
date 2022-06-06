@@ -2,10 +2,7 @@ import typing as t
 
 import click as _click
 
-from aclick.configuration import (
-    parse_configuration as _parse_configuration,
-    ParseConfigurationContext,
-)
+from aclick.configuration import parse_configuration as _parse_configuration
 
 from .core import Command, Context, Group
 from .utils import _fill_signature_defaults_from_dict, _full_signature, _get_help_text
@@ -176,14 +173,20 @@ def configuration_option(
         if not value or ctx.configuration_file_loaded is not None:
             return
 
-        print("callback")
         with open(value) as fconfig:
-            cfg = parse_configuration(
-                fconfig, context=ParseConfigurationContext(fn=ctx.callback)
-            )
-            callback = _fill_signature_defaults_from_dict(cfg)(ctx.callback)
-            ctx.callback = callback
-            ctx.callback_signature = _full_signature(callback)
+            cfg = parse_configuration(fconfig, ctx=ctx)
+            if ctx.callback is None:
+
+                def tmp_callback(*args, **kwargs):
+                    pass
+
+                setattr(tmp_callback, "__signature__", ctx.callback_signature)
+            else:
+                tmp_callback = ctx.callback
+            tmp_callback = _fill_signature_defaults_from_dict(cfg)(tmp_callback)
+            ctx.callback_signature = _full_signature(tmp_callback)
+            if ctx.callback is not None:
+                ctx.callback = tmp_callback
             ctx.configuration_file_loaded = value
 
     if not param_decls:
