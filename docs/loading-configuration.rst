@@ -119,3 +119,42 @@ If we pass our configuration file, the help page looks as follows:
 .. click:run::
 
     invoke(train, args=['--config', 'config.gin', '--help'], prog_name='python train.py')
+
+
+Custom configuration provider
+-----------------------------
+
+A custom configuration provider can be registered using the :func:`register_configuration_provider` decorator.
+We demonstrate this in a simple TXT configuration provider.
+First, we create a file `config.txt` with the following content:
+
+.. click:file::
+    config.txt
+
+    model.num_features=4
+    num_epochs=3
+
+We then register our configuration provider:
+
+.. click:example::
+   
+    @aclick.register_configuration_provider(r".*\.txt")
+    def parse_txt_configuration(fp, ctx):
+        cfg = dict()
+        for line in fp:
+            line = line.rstrip("\n")
+            key, val = line.split("=")
+            path = key.split(".")
+            local_cfg = cfg
+            for part in path[:-1]:
+                local_cfg[part] = local_cfg[part] if part in local_cfg else dict()
+                local_cfg = local_cfg[part]
+            local_cfg[path[-1]] = int(val)
+        return cfg
+
+    
+If we pass our configuration file, the help page looks as follows:
+
+.. click:run::
+
+    invoke(train, args=['--config', 'config.txt', '--help'], prog_name='python train.py')

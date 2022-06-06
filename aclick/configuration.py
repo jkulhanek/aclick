@@ -26,13 +26,12 @@ def register_configuration_provider(regex: str) -> t.Callable[[TCallable], TCall
 
 
 def parse_configuration(fp, *, ctx: Context):
-    '''
+    """
     Parses the configuration file using one of the supported configuration providers.
 
     :param fp: opened configuration file stream
-    :param context: context providing additional information used for parsing
+    :param ctx: context providing additional information used for parsing
     """
-    '''
     name = os.path.split(fp.name)[-1]
     regex_match = re.match(
         "(?:"
@@ -62,11 +61,24 @@ def parse_json_configuration(fp, *, ctx: Context):
     Loads a configuration stored in a json file
 
     :param fp: opened json file stream
-    :param context: context providing additional information used for parsing
+    :param ctx: context providing additional information used for parsing
     """
     import json
 
     return json.load(fp)
+
+
+@register_configuration_provider(r".*\.ya?ml")
+def parse_yaml_configuration(fp, *, ctx: Context):
+    """
+    Loads a configuration stored in a yaml (.yaml or .yml) file
+
+    :param fp: opened yaml file stream
+    :param ctx: context providing additional information used for parsing
+    """
+    import yaml
+
+    return yaml.safe_load(fp)
 
 
 @register_configuration_provider(r".*\.gin")
@@ -75,7 +87,7 @@ def parse_gin_configuration(fp, *, ctx: Context):
     Loads a configuration stored as a gin config file
 
     :param fp: opened gin file stream
-    :param context: context providing additional information used for parsing
+    :param ctx: context providing additional information used for parsing
     """
     import gin.config
 

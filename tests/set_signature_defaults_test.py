@@ -14,8 +14,13 @@ from ._common import _call_fn_empty, click_test, click_test_error
 
 def _store_config(cfg, type="json"):
     file = NamedTemporaryFile("w+", suffix=f".{type}")
-    assert type == "json"
-    json.dump(cfg, file)
+    assert type in {"json", "yaml"}
+    if type == "json":
+        json.dump(cfg, file)
+    elif type == "yaml":
+        import yaml
+
+        yaml.safe_dump(cfg, file)
     file.flush()
     return file
 
@@ -445,5 +450,31 @@ def test_config_option_from_str_type(monkeypatch):
             status, msg = err
             assert status == 0
             assert "jclass" in msg
+
+        main(monkeypatch)
+
+
+def test_config_option_yaml(monkeypatch):
+    @dataclass
+    class A:
+        b: str = "ok"
+
+    with _store_config(dict(a=dict(b="passed")), "yaml") as cfg:
+
+        @click_test("--configuration", cfg.name)
+        @aclick.configuration_option()
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
+
+        main(monkeypatch)
+
+    with _store_config(dict(a=dict(b="passed")), "yaml") as cfg:
+
+        @click_test("--config", cfg.name)
+        @aclick.configuration_option("--config")
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
 
         main(monkeypatch)
