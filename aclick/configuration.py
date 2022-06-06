@@ -1,3 +1,5 @@
+import copy
+import functools
 import os
 import re
 import typing as t
@@ -7,18 +9,27 @@ from .core import Context
 from .utils import _full_signature, get_class_name
 
 
-_CONFIGURATION_PROVIDERS: t.OrderedDict[str, t.Callable] = OrderedDict()
-TCallable = t.TypeVar("TCallable", bound=t.Callable)
+class ConfigurationProvider(t.Protocol):
+    def __call__(self, fp, *, ctx: Context) -> t.Dict[str, t.Any]:
+        raise NotImplementedError()
 
 
-def register_configuration_provider(regex: str) -> t.Callable[[TCallable], TCallable]:
+TConfigurationProvider = t.TypeVar(
+    "TConfigurationProvider", bound=ConfigurationProvider
+)
+_CONFIGURATION_PROVIDERS: t.OrderedDict[str, ConfigurationProvider] = OrderedDict()
+
+
+def register_configuration_provider(
+    regex: str,
+) -> t.Callable[[TConfigurationProvider], TConfigurationProvider]:
     """
     A decorator that registers a new configuration provider.
 
     :param regex: Regex expression that matches the supported filenames.
     """
 
-    def wrap(fn: TCallable) -> TCallable:
+    def wrap(fn):
         _CONFIGURATION_PROVIDERS[regex] = fn
         return fn
 
@@ -129,3 +140,46 @@ def parse_gin_configuration(fp, *, ctx: Context):
         )
     config = gin.config.get_bindings(gin_callback, resolve_references=False)
     return fix_config(config, ctx.callback)
+
+
+_parse_configuration = parse_configuration
+
+
+def restrict_parse_configuration(
+    path: str, parse_configuration: t.Optional[ConfigurationProvider] = None
+) -> ConfigurationProvider:
+    """
+    Restrict the parse_configuration function to a specific path.
+    This is useful if your function takes a shared parameter of specific class
+    for which you want to store the configuration.
+
+    :param path: path to the parameter for which you want to parse the configuration.
+    :param parse_configuration: parse_configuration function that will be used for parsing.
+                                Default is to use the registered configuration providers.
+    """
+    assert len(path) > 0, "Parameter path cannot be empty"
+    local_parse_configuration = (
+        _parse_configuration if parse_configuration is None else parse_configuration
+    )
+
+    @functools.wraps(local_parse_configuration)
+    def parse_configuration_wrapped(fp, *, ctx: Context):
+        # We need to update ctx
+        callback_signature = ctx.callback_signature
+        callback = ctx.callback
+        for part in path.split("."):
+            if part not in callback_signature.parameters:
+                raise RuntimeError(f"Cannot find path {path} in callback's signature")
+            tp = callback_signature.parameters[part].annotation
+            if callback is not None:
+                callback = tp
+            callback_signature = _full_signature(tp)
+        local_ctx = copy.copy(ctx)
+        local_ctx.callback = callback
+        local_ctx.callback_signature = callback_signature
+        cfg = local_parse_configuration(fp, ctx=local_ctx)
+        for part in reversed(path.split(".")):
+            cfg = {part: cfg}
+        return cfg
+
+    return parse_configuration_wrapped

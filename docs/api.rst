@@ -64,6 +64,8 @@ Configuration
 
 .. autofunction:: aclick.register_configuration_provider
 
+.. autofunction:: aclick.configuration.restrict_parse_configuration
+
 .. autofunction:: aclick.configuration.parse_json_configuration
 
 .. autofunction:: aclick.configuration.parse_yaml_configuration

@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 
 import aclick
 import pytest
+from aclick.configuration import restrict_parse_configuration
 
 from aclick.utils import _fill_signature_defaults_from_dict, _is_class, Literal
 
@@ -473,6 +474,36 @@ def test_config_option_yaml(monkeypatch):
 
         @click_test("--config", cfg.name)
         @aclick.configuration_option("--config")
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
+
+        main(monkeypatch)
+
+
+def test_restrict_parse_configuration(monkeypatch):
+    @dataclass
+    class A:
+        b: str = "ok"
+
+    with _store_config(dict(b="passed")) as cfg:
+
+        @click_test("--configuration", cfg.name)
+        @aclick.configuration_option(
+            parse_configuration=restrict_parse_configuration("a")
+        )
+        def main(a: A):
+            assert isinstance(a, A)
+            assert a.b == "passed"
+
+        main(monkeypatch)
+
+    with _store_config(dict(b="passed"), "yaml") as cfg:
+
+        @click_test("--configuration", cfg.name)
+        @aclick.configuration_option(
+            parse_configuration=restrict_parse_configuration("a")
+        )
         def main(a: A):
             assert isinstance(a, A)
             assert a.b == "passed"

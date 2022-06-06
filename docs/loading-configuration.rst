@@ -12,10 +12,10 @@ By default the :func:`configuration_option` loads one of the registered configur
 based on the filename of the config file and parses the file using the configuration provider.
 The following configuration providers are supported in the default :func:`parse_configuration`
 function:
+
 - `*.json`: a JSON parser is used
 - `*.yml|*.yaml`: a YAML parser is used
-- `*.gin`: the file is parsed using the `gin-config` library. In this case, all used classes
-have to be decorated with `@gin.configurable`.
+- `*.gin`: the file is parsed using the `gin-config` library. In this case, all used classes have to be decorated with `@gin.configurable`.
 
 A custom configuration parser can also be registered using the :func:`register_configuration_parser`
 function which takes a regex matching the supported filenames and a parse function as its arguments.
@@ -119,6 +119,45 @@ If we pass our configuration file, the help page looks as follows:
 .. click:run::
 
     invoke(train, args=['--config', 'config.gin', '--help'], prog_name='python train.py')
+
+
+Restricting configuration to a custom parameter
+-----------------------------------------------
+
+Sometimes you want to restrict the configuration to a single parameter.
+In AClick, this can easily be achieved using the :func:`restrict_parse_configuration`
+function. This function takes as its first parameter the path to the parameter
+for which we will parse the configuration. The (optional) second parameter
+is the function that will be used to parse the configuration.
+
+We show this feature in the following example:
+
+.. click:example::
+
+    @aclick.command()
+    @aclick.configuration_option(
+        '--config', 
+        parse_configuration=aclick.configuration.restrict_parse_configuration("model"))
+    def train(model: Model, num_epochs: int):
+        print(f'''lr: {model.learning_rate},
+    num_features: {model.num_features},
+    num_epochs: {num_epochs}''')
+
+
+Now, we create a file `config.json` with the following content:
+
+.. click:file::
+    config.json
+
+    {
+        "num_features": 4
+    }
+
+If we pass our configuration file, the help page looks as follows:
+
+.. click:run::
+
+    invoke(train, args=['--config', 'config.json', '--help'], prog_name='python train.py')
 
 
 Custom configuration provider
