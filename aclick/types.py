@@ -157,7 +157,7 @@ class Dict(_click.ParamType):
     def __init__(
         self,
         inner_type: t.Type,
-        key_type: t.Type = t.Type[str],
+        key_type: t.Type = str,
         container_type: t.Type = OrderedDict,
     ):
         assert key_type is str

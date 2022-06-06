@@ -8,8 +8,13 @@ from collections import OrderedDict
 from .core import Context
 from .utils import _full_signature, get_class_name
 
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol  # type: ignore
 
-class ConfigurationProvider(t.Protocol):
+
+class ConfigurationProvider(Protocol):
     def __call__(self, fp, *, ctx: Context) -> t.Dict[str, t.Any]:
         raise NotImplementedError()
 
