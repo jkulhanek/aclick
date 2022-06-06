@@ -7,13 +7,8 @@ from aclick.configuration import (
     ParseConfigurationContext,
 )
 
-from .core import _AClickContext, Command, Group
-from .utils import (
-    _fill_signature_defaults_from_dict,
-    _full_signature,
-    _get_help_text,
-    _wrap_fn_to_allow_kwargs_instead_of_args,
-)
+from .core import Command, Context, Group
+from .utils import _fill_signature_defaults_from_dict, _full_signature, _get_help_text
 
 
 CmdType = t.TypeVar("CmdType", bound=Command)
@@ -177,21 +172,19 @@ def configuration_option(
 
     def callback(ctx, param, value: str) -> None:
         assert parse_configuration is not None
-        click_ctx = ctx.ensure_object(_AClickContext)
-        if not value or click_ctx.configuration_file_loaded is not None:
+        assert isinstance(ctx, Context), "Context must be an instance of aclick.Context"
+        if not value or ctx.configuration_file_loaded is not None:
             return
 
-        command = ctx.command
+        print("callback")
         with open(value) as fconfig:
             cfg = parse_configuration(
-                fconfig, context=ParseConfigurationContext(fn=command.callback)
+                fconfig, context=ParseConfigurationContext(fn=ctx.callback)
             )
-            callback = getattr(command.callback, "__original_fn__", command.callback)
-            callback = _fill_signature_defaults_from_dict(cfg)(callback)
-            signature = _full_signature(callback)
-            command.callback = _wrap_fn_to_allow_kwargs_instead_of_args(callback)
-            command.callback_signature = signature
-            click_ctx.configuration_file_loaded = value
+            callback = _fill_signature_defaults_from_dict(cfg)(ctx.callback)
+            ctx.callback = callback
+            ctx.callback_signature = _full_signature(callback)
+            ctx.configuration_file_loaded = value
 
     if not param_decls:
         param_decls = ("--configuration",)

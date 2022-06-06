@@ -1,0 +1,4 @@
+Model.learning_rate = 0.1
+Model.num_features = 4
+train.model = @Model()
+train.num_epochs = 1

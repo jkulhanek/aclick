@@ -58,7 +58,8 @@ We have the following help page:
 
 Now, we create a file `config.json` with the following content:
 
-::
+.. click:file::
+    config.json
 
     {
         "num_epochs": 3,
@@ -98,16 +99,17 @@ We show the parsing of a gin-config configuration file in the following example:
     @aclick.configuration_option('--config')
     @gin.configurable
     def train(model: Model, num_epochs: int):
-        print(f'''lr: {learning_rate},
+        print(f'''lr: {model.learning_rate},
     num_features: {model.num_features},
     num_epochs: {num_epochs}''')
 
 
 Now, we create a file `config.gin` with the following content:
 
-::
+.. click:file::
+    config.gin
 
-    Model.num_epochs = 3
+    Model.learning_rate = 0.1
     Model.num_features = 4
     train.model = @Model()
     train.num_epochs = 1

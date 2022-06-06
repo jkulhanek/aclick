@@ -1,3 +1,4 @@
+import inspect
 import typing as t
 from dataclasses import dataclass
 
@@ -67,7 +68,11 @@ def test_dataclass_default(monkeypatch):
         assert isinstance(a, D2)
         assert a.test == "ok"
 
-    ctx = click.Context(test_dataclass_default)
+    ctx = aclick.Context(
+        test_dataclass_default,
+        callback_signature=inspect.signature(test_dataclass_default.callback),
+        callback=test_dataclass_default.callback,
+    )
     test_dataclass_default.parse_args(ctx, [])
     params = test_dataclass_default.get_params(ctx)
     assert params[1].default == "ok"

@@ -33,6 +33,8 @@ class ParameterWithDescription(inspect.Parameter):
     :attr description: String description of the parameter.
     """
 
+    __slots__ = inspect.Parameter.__slots__ + ("description",)
+
     def __init__(self, *args, description: t.Optional[str] = None, **kwargs):
         """
         Extends `inspect.Parameter` class with description parameter.
@@ -79,6 +81,16 @@ class ParameterWithDescription(inspect.Parameter):
     def __hash__(self):
         return hash((super().__hash__(), self.description))
 
+    def __reduce__(self):
+        tp, args, kwargs = super().__reduce__()
+        kwargs["description"] = self.description
+        return tp, args, kwargs
+
+    def __setstate__(self, state):
+        self.description = description = state.pop("description")
+        super().__setstate__(state)
+        state["description"] = description
+
     def replace(self, *, description=inspect._empty, **kwargs):
         """
         Generates a new instance and changes some of the properties.
@@ -106,6 +118,8 @@ class SignatureWithDescription(inspect.Signature):
     :attr short_description: Short description of the function.
     :attr long_description: Long description of the function.
     """
+
+    __slots__ = inspect.Signature.__slots__ + ("short_description", "long_description")
 
     def __init__(
         self,
@@ -163,6 +177,19 @@ class SignatureWithDescription(inspect.Signature):
 
     def __hash__(self):
         return hash((super().__hash__(), self.long_description, self.short_description))
+
+    def __reduce__(self):
+        tp, args, kwargs = super().__reduce__()
+        kwargs["long_description"] = self.long_description
+        kwargs["short_description"] = self.short_description
+        return tp, args, kwargs
+
+    def __setstate__(self, state):
+        self.long_description = long_description = state.pop("long_description")
+        self.short_description = short_description = state.pop("short_description")
+        super().__setstate__(state)
+        state["long_description"] = long_description
+        state["short_description"] = short_description
 
     def replace(
         self,
@@ -570,32 +597,38 @@ def from_dict(tp: t.Type, config: t.Any) -> t.Any:
     :param tp: type to parse the dictionary into.
     :param config: dictionary to parse to a specific type.
     """
+
     def inner(tp, sub_config, sub_path):
         full_path = ".".join(sub_path)
         if hasattr(tp, "from_str") and isinstance(sub_config, str):
             return tp.from_str(sub_config)
-        elif getattr(tp, "__origin__", None) is list and isinstance(sub_config, (list, tuple)):
+        elif getattr(tp, "__origin__", None) is list and isinstance(
+            sub_config, (list, tuple)
+        ):
             return tp.__origin__(from_dict(tp.__args__[0], x) for x in sub_config)
-        elif getattr(tp, "__origin__", None) is tuple and isinstance(sub_config, (list, tuple)):
-            return tp.__origin__(from_dict(local_tp, x) for local_tp, x in zip(tp.__args__, sub_config))
-        elif getattr(tp, "__origin__", None) in (dict, OrderedDict) and isinstance(sub_config, dict):
-            return tp.__origin__((from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v)) for k, v in sub_config.items())
+        elif getattr(tp, "__origin__", None) is tuple and isinstance(
+            sub_config, (list, tuple)
+        ):
+            return tp.__origin__(
+                from_dict(local_tp, x) for local_tp, x in zip(tp.__args__, sub_config)
+            )
+        elif getattr(tp, "__origin__", None) in (dict, OrderedDict) and isinstance(
+            sub_config, dict
+        ):
+            return tp.__origin__(
+                (from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v))
+                for k, v in sub_config.items()
+            )
         elif getattr(tp, "__origin__", None) is t.Union:
             if sub_config is None:
                 if type(None) not in tp.__args__:
-                    class_names = sorted(
-                        get_class_name(x) for x in tp.__args__
-                    )
+                    class_names = sorted(get_class_name(x) for x in tp.__args__)
                     raise RuntimeError(
                         f'Invalid value for parameter {full_path}. None is not in the list of supported classes: {", ".join(class_names)}'
                     )
                 return None
-            elif (
-                sum(1 for x in tp.__args__ if x not in (type(None),)) == 1
-            ):
-                cls = next(
-                    x for x in tp.__args__ if x not in (type(None),)
-                )
+            elif sum(1 for x in tp.__args__ if x not in (type(None),)) == 1:
+                cls = next(x for x in tp.__args__ if x not in (type(None),))
                 return from_dict(cls, sub_config)
 
             # Union type with specified class
@@ -611,9 +644,7 @@ def from_dict(tp: t.Type, config: t.Any) -> t.Any:
                     None,
                 )
                 if cls is None:
-                    class_names = sorted(
-                        get_class_name(x) for x in tp.__args__
-                    )
+                    class_names = sorted(get_class_name(x) for x in tp.__args__)
                     raise RuntimeError(
                         f'Invalid value for parameter {full_path}, cannot find class with name {class_name} in the list of supported classes: {", ".join(class_names)}'
                     )
@@ -631,10 +662,7 @@ def from_dict(tp: t.Type, config: t.Any) -> t.Any:
                     f"Invalid type for parameter {full_path}, expected {tp} but found {type(sub_config)}"
                 )
             return sub_config
-        elif (
-            getattr(tp, "__origin__", None) is Literal
-            and sub_config in tp.__args__
-        ):
+        elif getattr(tp, "__origin__", None) is Literal and sub_config in tp.__args__:
             return sub_config
         elif callable(tp):
             signature = _full_signature(tp)
@@ -642,12 +670,15 @@ def from_dict(tp: t.Type, config: t.Any) -> t.Any:
             new_kwargs = dict()
             for p in signature.parameters.values():
                 if p.kind not in {
-                        inspect.Parameter.POSITIONAL_ONLY,
-                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                        inspect.Parameter.KEYWORD_ONLY}:
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                }:
                     continue
                 if p.default is inspect._empty and p.name not in sub_config:
-                    raise RuntimeError(f'Cannot parse type {tp}. Missing key {".".join(sub_path + [p.name])}.')
+                    raise RuntimeError(
+                        f'Cannot parse type {tp}. Missing key {".".join(sub_path + [p.name])}.'
+                    )
                 value = sub_config.pop(p.name, p.default)
                 value = inner(p.annotation, value, sub_path + [p.name])
                 if p.kind == inspect.Parameter.POSITIONAL_ONLY:
@@ -659,6 +690,7 @@ def from_dict(tp: t.Type, config: t.Any) -> t.Any:
         raise RuntimeError(
             f'Unsupported type for parameter {".".join(sub_path)}. The parameter has type {type(tp)} and the passed value was {sub_config}'
         )
+
     return inner(tp, config, [])
 
 
@@ -680,26 +712,35 @@ def as_dict(obj: t.Any, tp: t.Optional[t.Type] = None) -> t.Any:
 
     if tp in _SUPPORTED_TYPES or tp in (type(None),):
         return obj
-    elif hasattr(tp, 'from_str'):
+    elif hasattr(tp, "from_str"):
         return str(obj)
-    elif getattr(tp, '__origin__', None) is Literal and type(obj) in _SUPPORTED_TYPES:
+    elif getattr(tp, "__origin__", None) is Literal and type(obj) in _SUPPORTED_TYPES:
         return obj
-    elif getattr(tp, '__origin__', None) is list:
+    elif getattr(tp, "__origin__", None) is list:
         return [as_dict(x, tp.__args__[0]) for x in obj]
-    elif getattr(tp, '__origin__', None) is tuple:
+    elif getattr(tp, "__origin__", None) is tuple:
         return [as_dict(x, local_tp) for x, local_tp in zip(obj, tp.__args__)]
-    elif getattr(tp, '__origin__', None) in (dict, OrderedDict):
+    elif getattr(tp, "__origin__", None) in (dict, OrderedDict):
         return OrderedDict((k, as_dict(x, tp.__args__[1])) for k, x in obj.items())
-    elif getattr(tp, '__origin__', None) is t.Union:
+    elif getattr(tp, "__origin__", None) is t.Union:
         types = tp.__args__
         if obj is None:
             if type(None) in types:
                 return None
-        elif all(_is_class(x) for x in types if x not in (type(None),)) and any(isinstance(obj, x) for x in types):
-            out_type = next(iter(sorted((x for x in types if isinstance(obj, x)), key=lambda x: -len(x.mro()))))
+        elif all(_is_class(x) for x in types if x not in (type(None),)) and any(
+            isinstance(obj, x) for x in types
+        ):
+            out_type = next(
+                iter(
+                    sorted(
+                        (x for x in types if isinstance(obj, x)),
+                        key=lambda x: -len(x.mro()),
+                    )
+                )
+            )
             out = as_dict(obj, out_type)
             if sum(1 for x in types if x not in (type(None),) and _is_class(x)) > 1:
-                out['__class__'] = get_class_name(out_type)
+                out["__class__"] = get_class_name(out_type)
             return out
         elif any(x for x in types if x in _SUPPORTED_TYPES and isinstance(obj, x)):
             return obj
@@ -708,10 +749,12 @@ def as_dict(obj: t.Any, tp: t.Optional[t.Type] = None) -> t.Any:
         out = OrderedDict()
         for p in _full_signature(tp).parameters.values():
             if not hasattr(obj, p.name):
-                raise RuntimeError(f'Cannot serialize type {tp} because the property {p.name} was not set in the constructor')
+                raise RuntimeError(
+                    f"Cannot serialize type {tp} because the property {p.name} was not set in the constructor"
+                )
             out[p.name] = as_dict(getattr(obj, p.name), p.annotation)
         return out
-    raise RuntimeError(f'Cannot serialize type {tp} because it is not supported')
+    raise RuntimeError(f"Cannot serialize type {tp} because it is not supported")
 
 
 def _fill_signature_defaults_from_dict(
@@ -723,23 +766,36 @@ def _fill_signature_defaults_from_dict(
             new_p = None
             if hasattr(p.annotation, "from_str") and isinstance(sub_config, str):
                 new_p = p.replace(default=p.annotation.from_str(sub_config))
-            elif (
-                getattr(p.annotation, "__origin__", None) is list
-                and isinstance(sub_config, (list, tuple))
+            elif getattr(p.annotation, "__origin__", None) is list and isinstance(
+                sub_config, (list, tuple)
             ):
-                new_p = p.replace(default=[from_dict(p.annotation.__args__[0], x) for x in sub_config])
-            elif (
-                getattr(p.annotation, "__origin__", None) is tuple
-                and isinstance(sub_config, (list, tuple))
+                new_p = p.replace(
+                    default=[from_dict(p.annotation.__args__[0], x) for x in sub_config]
+                )
+            elif getattr(p.annotation, "__origin__", None) is tuple and isinstance(
+                sub_config, (list, tuple)
             ):
-                new_p = p.replace(default=tuple(from_dict(local_tp, x) for local_tp, x in zip(p.annotation.__args__, sub_config)))
+                new_p = p.replace(
+                    default=tuple(
+                        from_dict(local_tp, x)
+                        for local_tp, x in zip(p.annotation.__args__, sub_config)
+                    )
+                )
             elif (
-                getattr(p.annotation, "__origin__", None) in (dict, OrderedDict)
+                getattr(p.annotation, "__origin__", None)
+                in (
+                    dict,
+                    OrderedDict,
+                )
                 and isinstance(sub_config, dict)
             ):
                 tp = p.annotation
-                new_p = p.replace(default=p.annotation.__origin__(
-                    (from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v)) for k, v in sub_config.items()))
+                new_p = p.replace(
+                    default=p.annotation.__origin__(
+                        (from_dict(tp.__args__[0], k), from_dict(tp.__args__[1], v))
+                        for k, v in sub_config.items()
+                    )
+                )
             elif getattr(p.annotation, "__origin__", None) is t.Union:
                 if sub_config is None:
                     if type(None) not in p.annotation.__args__:
@@ -792,7 +848,9 @@ def _fill_signature_defaults_from_dict(
                         for x in p.annotation.__args__
                         if x not in (type(None),)
                     )
-                    new_p = p.replace(annotation=t.Union[sub_types], default=inspect._empty)
+                    new_p = p.replace(
+                        annotation=t.Union[sub_types], default=inspect._empty
+                    )
                 elif any(isinstance(sub_config, x) for x in _SUPPORTED_TYPES) and any(
                     isinstance(sub_config, x) for x in p.annotation.__args__
                 ):
@@ -819,7 +877,7 @@ def _fill_signature_defaults_from_dict(
             elif _is_class(p.annotation):
                 new_p = p.replace(
                     annotation=_map_callable(p.annotation, sub_config, sub_path),
-                    default=inspect._empty
+                    default=inspect._empty,
                 )
 
             if new_p is None:
@@ -835,9 +893,10 @@ def _fill_signature_defaults_from_dict(
             keyword_only = True
             for p in signature.parameters.values():
                 if p.kind not in {
-                        inspect.Parameter.POSITIONAL_ONLY,
-                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                        inspect.Parameter.KEYWORD_ONLY}:
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                }:
                     continue
                 if p.name in config:
                     sub_path = path + [p.name]
@@ -884,7 +943,7 @@ def _fill_signature_defaults_from_dict(
 
             setattr(out_fn, "__signature__", signature)
             out_fn.__doc__ = callable_function.__doc__
-            if hasattr(callable_function, '__name__'):
+            if hasattr(callable_function, "__name__"):
                 out_fn.__name__ = callable_function.__name__
             if _is_class(callable_function):
 
@@ -898,7 +957,7 @@ def _fill_signature_defaults_from_dict(
                 )
                 OutClass.__signature__ = signature
                 OutClass.__doc__ = callable_function.__doc__
-                if hasattr(callable_function, '__name__'):
+                if hasattr(callable_function, "__name__"):
                     OutClass.__name__ = callable_function.__name__
                 if hasattr(callable_function, "from_str"):
                     setattr(
@@ -910,8 +969,6 @@ def _fill_signature_defaults_from_dict(
         return _map_callable(callable_function, config, [])
 
     return wrap
-
-
 
 
 def _merge_signatures(
@@ -1208,8 +1265,12 @@ def _build_examples(
             )
         elif cls in (type(None),):
             return _ClassArgument._escaped_str("None")
-        elif getattr(cls, "__origin__", None) is Literal and all(type(x) in _SUPPORTED_TYPES for x in cls.__args__):
-            return _ClassArgument._escaped_str("{" + "|".join(map(str, cls.__args__)) + "}")
+        elif getattr(cls, "__origin__", None) is Literal and all(
+            type(x) in _SUPPORTED_TYPES for x in cls.__args__
+        ):
+            return _ClassArgument._escaped_str(
+                "{" + "|".join(map(str, cls.__args__)) + "}"
+            )
         elif getattr(cls, "__origin__", None) is t.Union:
             return _switch_type(
                 inner(

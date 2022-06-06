@@ -122,7 +122,7 @@ def parse_gin_configuration(fp, *, context: ParseConfigurationContext):
         gin_callback = getattr(gin_callback, "__wrapped__", None)
     else:
         raise RuntimeError(
-            "Class of function {tp.__name__} was not registered with gin"
+            f"Class of function {context.fn} was not registered with gin"
         )
     config = gin.config.get_bindings(gin_callback, resolve_references=False)
     return fix_config(config, context.fn)
