@@ -8,9 +8,9 @@ from collections import OrderedDict
 import click as _click
 
 from .types import (
-    _AClickContext,
     ClassHierarchicalOption,
     ClassUnion,
+    DEFAULT_USE_DASHES,
     Dict as DictParam,
     List,
     OptionalTypeHierarchicalOption,
@@ -35,6 +35,30 @@ from .utils import (
 
 
 _get_class_name = get_class_name
+
+
+class Context(_click.Context):
+    def __init__(
+        self,
+        *args,
+        callback_signature: t.Optional[inspect.Signature] = None,
+        callback: t.Optional[t.Callable] = None,
+        param_groups: t.Optional[t.List[ParameterGroup]] = None,
+        param_group_contexts: t.Optional[t.Dict[str, t.Any]] = None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.callback = callback
+        if callback_signature is None:
+            assert (
+                callback is not None
+            ), "Either callback or callback_signature must be specified"
+            self.callback_signature: inspect.Signature = _full_signature(callback)
+        else:
+            self.callback_signature = callback_signature
+        self.param_groups = param_groups or []
+        self.param_group_contexts = param_group_contexts or dict()
+        self.configuration_file_loaded: t.Optional[str] = None
 
 
 class ParameterRenamer(metaclass=ABCMeta):
@@ -108,6 +132,8 @@ class Command(_click.Command):
                              the command is deprecated.
     """
 
+    context_class = Context
+
     def __init__(
         self,
         *args,
@@ -115,7 +141,7 @@ class Command(_click.Command):
         hierarchical: bool = True,
         map_parameter_name: t.Optional[ParameterRenamer] = None,
         show_defaults: t.Optional[bool] = True,
-        use_dashes: bool = True,
+        use_dashes: bool = DEFAULT_USE_DASHES,
         num_inline_examples_help: int = 0,
         **kwargs,
     ):
@@ -125,7 +151,6 @@ class Command(_click.Command):
             if self.callback is None:
                 raise ValueError("Either signature or callback must be specified")
             signature = _full_signature(self.callback)
-            self.callback = _wrap_fn_to_allow_kwargs_instead_of_args(self.callback)
         self.callback_signature: inspect.Signature = signature
         self.hierarchical = hierarchical
         self.map_parameter_name = map_parameter_name
@@ -143,9 +168,12 @@ class Command(_click.Command):
             self.help = self.help if self.help is not None else help
 
     def make_context(self, *args, **kwargs):
-        ctx = super().make_context(*args, **kwargs)
-        aclick_ctx = ctx.ensure_object(_AClickContext)
-        aclick_ctx.use_dashes = self.use_dashes
+        ctx = super().make_context(
+            *args,
+            **kwargs,
+            callback_signature=self.callback_signature,
+            callback=self.callback,
+        )
         return ctx
 
     def build_click_parameter(
@@ -382,21 +410,24 @@ class Command(_click.Command):
         return get_class_name(cls).replace("_", "-")
 
     def get_params(self, ctx: _click.Context):
-        aclick_ctx = ctx.ensure_object(_AClickContext)
-        aclick_ctx.param_groups = []
+        assert isinstance(ctx, Context), "Context must be an instance of aclick.Context"
+        ctx.param_groups = []
         params = super().get_params(ctx)
         existing_names = {x.name for x in params}
         signature_params = []
-        for p in self.callback_signature.parameters.values():
+        for p in ctx.callback_signature.parameters.values():
             click_param = self.build_click_parameter(p.name, p)
             if click_param is not None:
                 signature_params.append(click_param)
 
         def walk(p):
+            assert isinstance(
+                ctx, Context
+            ), "Context must be an instance of aclick.Context"  # only because of mypy
             if isinstance(p, _click.Parameter) and p.name not in existing_names:
                 params.append(p)
             if isinstance(p, ParameterGroup):
-                aclick_ctx.param_groups.append(p)
+                ctx.param_groups.append(p)
                 for p_child in p.get_params(ctx):
                     walk(p_child)
 
@@ -405,16 +436,14 @@ class Command(_click.Command):
         return params
 
     def parse_args(self, ctx: _click.Context, args: t.List[str]) -> t.List[str]:
+        assert isinstance(ctx, Context), "Context must be an instance of aclick.Context"
         original_args = args
-        aclick_ctx = ctx.ensure_object(_AClickContext)
         if self.hierarchical:
             last_num_params = 0
             local_ctx = copy.deepcopy(ctx)
 
             # Share param group contexts with the local context
-            local_ctx.ensure_object(
-                _AClickContext
-            ).param_group_contexts = aclick_ctx.param_group_contexts
+            local_ctx.param_group_contexts = ctx.param_group_contexts
             local_ctx.command = ctx.command
             local_ctx.ignore_unknown_options = True
             local_ctx.resilient_parsing = True
@@ -439,12 +468,27 @@ class Command(_click.Command):
                         iters_left = 1
                     value, args = param.handle_parse_result(local_ctx, opts, args)
 
+            ctx.configuration_file_loaded = local_ctx.configuration_file_loaded
+            ctx.callback = local_ctx.callback
+            ctx.callback_signature = local_ctx.callback_signature
         super().parse_args(ctx, original_args)
 
-        for param_group in reversed(aclick_ctx.param_groups):
+        for param_group in reversed(ctx.param_groups):
             param_group.handle_parse_group_result(ctx)
 
         return ctx.args
+
+    def invoke(self, ctx: _click.Context) -> t.Any:
+        assert isinstance(ctx, Context), "Context must be an instance of aclick.Context"
+        callback = ctx.callback
+        if callback is not None:
+            callback = _wrap_fn_to_allow_kwargs_instead_of_args(callback)
+        old_callback, self.callback = self.callback, callback
+        try:
+            result = super().invoke(ctx)
+        finally:
+            self.callback = old_callback
+        return result
 
 
 class Group(_click.Group, Command):

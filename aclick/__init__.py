@@ -1,7 +1,12 @@
 from . import _version, core, types, utils
 from ._version import __version__  # noqa: F401
+from .configuration import (  # noqa: F401
+    parse_configuration,
+    register_configuration_provider,
+)
 from .core import (  # noqa: F401
     Command,
+    Context,
     FlattenParameterRenamer,
     Group,
     ParameterRenamer,

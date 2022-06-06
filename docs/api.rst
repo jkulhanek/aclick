@@ -57,6 +57,21 @@ Utilities
 
 .. autofunction:: aclick.utils.from_dict
 
+Configuration
+-------------
+
+.. autofunction:: aclick.parse_configuration
+
+.. autofunction:: aclick.register_configuration_provider
+
+.. autofunction:: aclick.configuration.restrict_parse_configuration
+
+.. autofunction:: aclick.configuration.parse_json_configuration
+
+.. autofunction:: aclick.configuration.parse_yaml_configuration
+
+.. autofunction:: aclick.configuration.parse_gin_configuration
+
 
 Other classes
 -------------
@@ -66,3 +81,5 @@ Other classes
 .. autoclass:: aclick.RegexParameterRenamer
 
 .. autoclass:: aclick.FlattenParameterRenamer
+
+.. autoclass:: aclick.Context

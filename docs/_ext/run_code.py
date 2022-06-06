@@ -2,14 +2,16 @@ import contextlib
 import shlex
 import subprocess
 import sys
+import os
 import tempfile
+import typing as t
+from dataclasses import dataclass
 from functools import partial
 
 import aclick
-from dataclasses import dataclass
-import typing as t
 
 import click
+import gin
 from click.testing import CliRunner, EchoingStdin
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -67,7 +69,16 @@ def patch_modules():
 class ExampleRunner(CliRunner):
     def __init__(self):
         super().__init__(echo_stdin=True)
-        self.namespace = {"click": click, "dataclass": dataclass, "t": t, "aclick": aclick, "__file__": "dummy.py"}
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self.temp_dir = self._temp_dir.name
+        self.namespace = {
+            "click": click,
+            "dataclass": dataclass,
+            "t": t,
+            "gin": gin,
+            "aclick": aclick,
+            "__file__": "dummy.py",
+        }
 
     @contextlib.contextmanager
     def isolation(self, *args, **kwargs):
@@ -129,10 +140,13 @@ class ExampleRunner(CliRunner):
             if terminate_input:
                 input += "\x04"
 
+        cwd = os.getcwd()
+        os.chdir(self.temp_dir)
         result = super().invoke(
             cli=cli, args=args, input=input, env=env, prog_name=prog_name, **extra
         )
         output_lines.extend(result.output.splitlines())
+        os.chdir(cwd)
         return result
 
     def declare_example(self, source):
@@ -171,6 +185,7 @@ class ExampleRunner(CliRunner):
 
     def close(self):
         """Clean up the runner once the document has been read."""
+        self._temp_dir.cleanup()
         pass
 
 
@@ -249,10 +264,44 @@ class RunExampleDirective(Directive):
         return node.children
 
 
+class CreateFileDirective(Directive):
+    has_content = True
+    required_arguments = 1
+    optional_arguments = 0
+    final_argument_whitespace = False
+
+    def run(self):
+        doc = ViewList()
+        runner = get_example_runner(self.state.document)
+        filename, = self.arguments
+
+        try:
+            txt = "\n".join(self.content)
+            with open(os.path.join(runner.temp_dir, filename), "w+") as f:
+                f.write(txt)
+                f.flush()
+        except BaseException:
+            runner.close()
+            raise
+
+        doc.append(".. sourcecode:: text", "")
+        doc.append("", "")
+
+        for line in self.content:
+            doc.append(" " + line, "")
+
+        node = nodes.section()
+        self.state.nested_parse(doc, self.content_offset, node)
+        return node.children
+
+
 class ClickDomain(Domain):
     name = "click"
     label = "Click"
-    directives = {"example": DeclareExampleDirective, "run": RunExampleDirective}
+    directives = {
+        "example": DeclareExampleDirective,
+        "file": CreateFileDirective,
+        "run": RunExampleDirective}
 
 
 def delete_example_runner_state(app, doctree):

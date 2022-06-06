@@ -1,3 +1,4 @@
+import copy
 import typing as t
 from dataclasses import dataclass
 from functools import partial
@@ -57,6 +58,9 @@ def test_parameter_with_description():
     assert p3.description == "ok"
     assert p2 == p3.replace(description="test")
 
+    assert p1 == copy.deepcopy(p1)
+    assert p1.description == copy.deepcopy(p1).description
+
 
 def test_signature_with_description():
     parameters = [
@@ -115,6 +119,10 @@ def test_signature_with_description():
     assert s3.short_description == "ok"
     assert s3.long_description == "pass"
     assert s2 == s3.replace(short_description="test", long_description="ok")
+
+    assert s1 == copy.deepcopy(s1)
+    assert s1.long_description == copy.deepcopy(s1).long_description
+    assert s1.short_description == copy.deepcopy(s1).short_description
 
 
 def test_parse_sections_google():

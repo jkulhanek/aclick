@@ -2,13 +2,10 @@ import typing as t
 
 import click as _click
 
-from .core import _AClickContext, Command, Group
-from .utils import (
-    _full_signature,
-    _get_help_text,
-    _wrap_fn_to_allow_kwargs_instead_of_args,
-    _fill_signature_defaults_from_dict,
-)
+from aclick.configuration import parse_configuration as _parse_configuration
+
+from .core import Command, Context, Group
+from .utils import _fill_signature_defaults_from_dict, _full_signature, _get_help_text
 
 
 CmdType = t.TypeVar("CmdType", bound=Command)
@@ -154,7 +151,7 @@ def group(
 
 def configuration_option(
     *param_decls: str,
-    parse_configuration: t.Optional[t.Callable[[t.Any], t.Dict[str, t.Any]]] = None,
+    parse_configuration: t.Optional[t.Callable[..., t.Dict[str, t.Any]]] = None,
     **kwargs: t.Any,
 ) -> t.Callable[[F], F]:
     """
@@ -168,25 +165,29 @@ def configuration_option(
     """
 
     if parse_configuration is None:
-        from .utils import parse_json_configuration
-
-        parse_configuration = parse_json_configuration
+        parse_configuration = _parse_configuration
 
     def callback(ctx, param, value: str) -> None:
         assert parse_configuration is not None
-        click_ctx = ctx.ensure_object(_AClickContext)
-        if not value or click_ctx.configuration_file_loaded is not None:
+        assert isinstance(ctx, Context), "Context must be an instance of aclick.Context"
+        if not value or ctx.configuration_file_loaded is not None:
             return
 
-        command = ctx.command
         with open(value) as fconfig:
-            cfg = parse_configuration(fconfig)
-            callback = getattr(command.callback, "__original_fn__", command.callback)
-            callback = _fill_signature_defaults_from_dict(cfg)(callback)
-            signature = _full_signature(callback)
-            command.callback = _wrap_fn_to_allow_kwargs_instead_of_args(callback)
-            command.callback_signature = signature
-            click_ctx.configuration_file_loaded = value
+            cfg = parse_configuration(fconfig, ctx=ctx)
+            if ctx.callback is None:
+
+                def tmp_callback(*args, **kwargs):
+                    pass
+
+                setattr(tmp_callback, "__signature__", ctx.callback_signature)
+            else:
+                tmp_callback = ctx.callback
+            tmp_callback = _fill_signature_defaults_from_dict(cfg)(tmp_callback)
+            ctx.callback_signature = _full_signature(tmp_callback)
+            if ctx.callback is not None:
+                ctx.callback = tmp_callback
+            ctx.configuration_file_loaded = value
 
     if not param_decls:
         param_decls = ("--configuration",)

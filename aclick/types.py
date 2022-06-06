@@ -1,7 +1,6 @@
 import inspect
 import typing as t
 from collections import OrderedDict
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import click as _click
@@ -21,6 +20,8 @@ from .utils import (
 
 if TYPE_CHECKING:
     from .core import Command
+
+DEFAULT_USE_DASHES = True
 
 
 class ParameterGroup:
@@ -65,7 +66,10 @@ class ParameterGroup:
         self, ctx: _click.Context, value: t.Any = inspect._empty
     ):
         assert self.name is not None
-        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
+        assert hasattr(
+            ctx, "param_group_contexts"
+        ), "Context must be an instance of aclick.Context"
+        param_groups: t.Dict[str, ParameterGroup] = getattr(ctx, "param_group_contexts")
         if self.name in param_groups:
             return param_groups[self.name]
         elif value is not inspect._empty:
@@ -74,7 +78,10 @@ class ParameterGroup:
 
     def _get_first_value(self, ctx: _click.Context):
         assert self.name is not None
-        param_groups = ctx.ensure_object(_AClickContext).param_group_contexts
+        assert hasattr(
+            ctx, "param_group_contexts"
+        ), "Context must be an instance of aclick.Context"
+        param_groups: t.Dict[str, ParameterGroup] = getattr(ctx, "param_group_contexts")
         return param_groups[self.name]
 
 
@@ -150,7 +157,7 @@ class Dict(_click.ParamType):
     def __init__(
         self,
         inner_type: t.Type,
-        key_type: t.Type = t.Type[str],
+        key_type: t.Type = str,
         container_type: t.Type = OrderedDict,
     ):
         assert key_type is str
@@ -225,8 +232,10 @@ class ClassUnion(_click.ParamType):
             return value
 
         assert isinstance(value, str)
-        aclick_ctx = (
-            _AClickContext() if ctx is None else ctx.ensure_object(_AClickContext)
+        use_dashes = (
+            getattr(ctx.command, "use_dashes", DEFAULT_USE_DASHES)
+            if ctx is not None
+            else DEFAULT_USE_DASHES
         )
         try:
             value = parse_class_structure(value, self.classes, self.known_classes)
@@ -243,7 +252,7 @@ class ClassUnion(_click.ParamType):
                 msg += "\n\n".join(
                     build_examples(
                         union_type,
-                        use_dashes=aclick_ctx.use_dashes,
+                        use_dashes=use_dashes,
                         limit=num_examples_on_error,
                     )
                 )
@@ -441,11 +450,3 @@ class OptionalTypeHierarchicalOption(_click.Option, ParameterGroup):
             )
         else:
             ctx.params[self.name] = None
-
-
-@dataclass
-class _AClickContext:
-    param_groups: t.List[ParameterGroup] = field(default_factory=list)
-    param_group_contexts: t.Dict[str, t.Any] = field(default_factory=dict)
-    use_dashes: bool = True
-    configuration_file_loaded: t.Optional[str] = None
