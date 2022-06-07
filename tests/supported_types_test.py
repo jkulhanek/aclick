@@ -107,6 +107,10 @@ class B:
         t.OrderedDict[str, A],
         t.Optional[A],
         t.Optional[B],
+        t.Optional[t.List[A]],
+        t.Optional[t.Tuple[A]],
+        t.Optional[t.Dict[str, A]],
+        t.Optional[t.OrderedDict[str, A]],
     ],
 )
 def test_type(tp):

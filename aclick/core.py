@@ -1,6 +1,7 @@
 import copy
 import inspect
 import re
+import sys
 import typing as t
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
@@ -8,6 +9,7 @@ from collections import OrderedDict
 import click as _click
 
 from .types import (
+    AllParameters,
     ClassHierarchicalOption,
     ClassUnion,
     DEFAULT_USE_DASHES,
@@ -26,6 +28,7 @@ from .utils import (
     _is_class,
     _SUPPORTED_TYPES,
     _wrap_fn_to_allow_kwargs_instead_of_args,
+    as_dict,
     build_examples,
     get_class_name,
     Literal,
@@ -75,6 +78,28 @@ class ParameterRenamer(metaclass=ABCMeta):
         :return: The new name of the parameter.
         """
         raise NotImplementedError()  # pragma: no cover
+
+
+def handle_parse_all_parameters_group_result(ctx: Context):
+    param_subscribers = []
+    for p in ctx.callback_signature.parameters.values():
+        if getattr(p.annotation, "__origin__", None) is AllParameters:
+            param_subscribers.append((p.name, next(iter(p.annotation.__args__), "")))
+    out_dict = OrderedDict(
+        (
+            (k, as_dict(v, ctx.callback_signature.parameters[k].annotation))
+            for k, v in ctx.params.items()
+        )
+    )
+    for pname, path in param_subscribers:
+        if sys.version < "3.9":
+            # path can be ForwardRef
+            path = getattr(path, "__forward_arg__", path)
+        local_out_dict = out_dict
+        if path != "":
+            for part in path.split("."):
+                local_out_dict = local_out_dict[part]
+        ctx.params[pname] = copy.deepcopy(local_out_dict)
 
 
 class Command(_click.Command):
@@ -198,6 +223,14 @@ class Command(_click.Command):
         is_hierarchical = self.hierarchical and _is_hierarchical(param)
         parameter_type = param.annotation
         option_name = []
+
+        if getattr(param.annotation, "__origin__", None) is AllParameters:
+            # We ignore this parameter now, it will be used for binding later
+            if "." in full_name:
+                raise ValueError(
+                    "AllParameters arguments are allowed only at the root level"
+                )
+            return None
 
         if param.kind == inspect.Parameter.POSITIONAL_ONLY and "." in full_name:
             raise ValueError(
@@ -475,6 +508,9 @@ class Command(_click.Command):
 
         for param_group in reversed(ctx.param_groups):
             param_group.handle_parse_group_result(ctx)
+
+        # Handle AllParameters group
+        handle_parse_all_parameters_group_result(ctx)
 
         return ctx.args
 

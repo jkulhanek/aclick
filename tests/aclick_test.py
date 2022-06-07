@@ -4,6 +4,8 @@ import typing as t
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+import aclick
+
 import aclick as click
 import click as _click
 import pytest
@@ -415,3 +417,32 @@ def test_command_with_signature_only(monkeypatch):
 
     main()
     assert was_called, "Function was not called"
+
+
+@click_test("--a", "8")
+def test_click_all_parameters(
+    config: aclick.AllParameters, b: str = "test", a: int = 5, c: float = 3.4
+):
+    assert config == dict(b="test", a=8, c=3.4)
+
+
+def test_click_all_parameters_union_of_dataclasses(monkeypatch):
+    from .hierarchical_test import D1, D2
+
+    @click_test("--a", "d2", hierarchical=True)
+    def test_union_of_dataclasses1(config: aclick.AllParameters, a: t.Union[D1, D2]):
+        assert config == dict(a=dict(test="ok", __class__="d2", test2=4))
+
+    test_union_of_dataclasses1(monkeypatch)
+
+
+def test_click_all_parameters_with_path_union_of_dataclasses(monkeypatch):
+    from .hierarchical_test import D1, D2
+
+    @click_test("--a", "d2", hierarchical=True)
+    def test_union_of_dataclasses2(
+        config: aclick.AllParameters["a"], a: t.Union[D1, D2]
+    ):
+        assert config == dict(test="ok", __class__="d2", test2=4)
+
+    test_union_of_dataclasses2(monkeypatch)

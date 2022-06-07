@@ -1,4 +1,5 @@
 import inspect
+import sys
 import typing as t
 from collections import OrderedDict
 from typing import TYPE_CHECKING
@@ -450,3 +451,12 @@ class OptionalTypeHierarchicalOption(_click.Option, ParameterGroup):
             )
         else:
             ctx.params[self.name] = None
+
+
+class AllParameters(t.Dict[str, t.Any]):
+    __args__: t.Tuple = tuple()
+
+
+setattr(AllParameters, "__origin__", AllParameters)
+if sys.version < "3.9":
+    setattr(AllParameters, "__parameters__", (None,))

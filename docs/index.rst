@@ -87,6 +87,7 @@ Documentation
    inline-types
    parameter-renaming
    loading-configuration
+   advanced
 
 
 API Reference

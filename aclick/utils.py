@@ -730,6 +730,13 @@ def as_dict(obj: t.Any, tp: t.Optional[t.Type] = None) -> t.Any:
         if obj is None:
             if type(None) in types:
                 return None
+        elif (
+            sum(1 for x in tp.__args__ if x not in (type(None),)) == 1
+            and obj is not None
+        ):
+            # Optional type
+            out_type = next(x for x in tp.__args__ if x not in (type(None),))
+            return as_dict(obj, out_type)
         elif all(_is_class(x) for x in types if x not in (type(None),)) and any(
             isinstance(obj, x) for x in types
         ):
