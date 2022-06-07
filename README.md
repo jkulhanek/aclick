@@ -22,7 +22,8 @@ The following features are currently supported:
 - Type `Literal` of strings.
 - Lists and tuples of both the primitive and inlined complex types.
 - Parameters can be renamed.
-- Parameter values can be loaded from a json or other file.
+- Parameter values can be loaded from a JSON, YAML, or other file.
+- Configuration can be loaded using the [gin-config](https://github.com/google/gin-config) package.
 - For other features please refer to the [documentation](https://jkulhanek.github.io/aclick).
 
 ## Installation

@@ -1,12 +1,16 @@
 import typing as t
 from dataclasses import dataclass
 
+import aclick
+
 import click
 
 import pytest
 from aclick import Context
 from aclick.configuration import parse_configuration
 from aclick.utils import from_dict
+
+from ._common import click_test
 
 try:
     import gin
@@ -231,3 +235,29 @@ fn5.e = @tst.E()
     out = from_dict(fn5, cfg)
     assert isinstance(out, E)
     assert out.val1 == "pass"
+
+
+def test_restrict_parse_gin_configuration(monkeypatch, tmp_path):
+    @gin.configurable
+    @dataclass
+    class Ac:
+        b: str = "ok"
+
+    with open(tmp_path / "conf.gin", "w+") as f:
+        f.write(
+            """
+Ad.b = "passed"
+        """
+        )
+
+    @click_test("--configuration", tmp_path / "conf.gin")
+    @aclick.configuration_option(
+        parse_configuration=aclick.configuration.restrict_parse_configuration("a")
+    )
+    @gin.configurable
+    def main(a: Ac, other_conf: int = 1):
+        assert isinstance(a, Ac)
+        assert a.b == "passed"
+        assert other_conf == 1
+
+        main(monkeypatch)
