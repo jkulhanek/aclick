@@ -1,0 +1,777 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Advanced features" href="advanced.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advanced.html" title="Advanced features"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">API</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-aclick">
+<span id="api"></span><h1>API<a class="headerlink" href="#module-aclick" title="Permalink to this headline">¶</a></h1>
+<p>This part of the documentation lists the full API reference of all public
+classes and functions. For more details refer to <a class="reference external" href="https://click.palletsprojects.com/">Click documentation</a></p>
+<section id="decorators">
+<h2>Decorators<a class="headerlink" href="#decorators" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.command">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#aclick.Command" title="aclick.core.Command"><span class="pre">aclick.core.Command</span></a></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/decorators.py#L49-L116"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.command" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#aclick.Command" title="aclick.core.Command"><span class="pre">aclick.core.Command</span></a><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.decorators.CmdType</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.decorators.CmdType</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.decorators.ClickCmdType</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.decorators.ClickCmdType</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>Creates a new <a class="reference internal" href="#aclick.Command" title="aclick.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a> and uses the decorated function as
+callback. This will automatically parse the function signature (if
+no other signature is supplied) and generates <cite>Option</cite> and <cite>Argument</cite>
+instance accordingly. User can override individual parameters either
+by using <cite>click.option</cite> and <cite>click.argument</cite> decorators or by passing
+custom parameters with the same name as the parameters to override.
+The name of the command defaults to the name of the function with
+underscores replaced by dashes. If you want to change that, you can
+pass the intended name as the first argument.
+All keyword arguments are forwarded to the underlying command class.
+Once decorated the function turns into a <a class="reference internal" href="#aclick.Command" title="aclick.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a> instance
+that can be invoked as a command line utility or be attached to a
+command <a class="reference internal" href="#aclick.Group" title="aclick.Group"><code class="xref py py-class docutils literal notranslate"><span class="pre">Group</span></code></a>.</p>
+<p>NOTE: This decorator should always be used instead of <cite>click</cite> command
+decorator, because in <cite>click</cite>, the help is automatically populated
+with the callback’s <cite>__doc__</cite> and it is not parsed correctly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – the name of the command.  This defaults to the function
+name with underscores replaced by dashes.</p></li>
+<li><p><strong>cls</strong> – the command class to instantiate.  This defaults to
+<a class="reference internal" href="#aclick.Command" title="aclick.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a>. If the class is not a subclass of <a class="reference internal" href="#aclick.Command" title="aclick.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a>,
+it is automatically wrapped.</p></li>
+<li><p><strong>hierarchical</strong> – whether to parse complex types using hierarchical
+parsing instead of inline parsing. In hierarchical
+parsing the complex class options are expanded into
+individual options corresponding to individual
+properties. Note that some types are not supported
+with hierarchical parsing. Default is to use hierarchical
+parsing.</p></li>
+<li><p><strong>map_parameter_name</strong> – a function that maps from parameter paths
+(e.g. param1.property1.subproperty2) into
+parameter name used in parsing.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.group">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#aclick.Group" title="aclick.core.Group"><span class="pre">aclick.core.Group</span></a></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/decorators.py#L134-L149"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.group" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.decorators.F</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#aclick.Group" title="aclick.core.Group"><span class="pre">aclick.core.Group</span></a><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>Creates a new <a class="reference internal" href="#aclick.Group" title="aclick.Group"><code class="xref py py-class docutils literal notranslate"><span class="pre">Group</span></code></a> with a function as callback.  This
+works otherwise the same as <a class="reference internal" href="#aclick.command" title="aclick.command"><code class="xref py py-func docutils literal notranslate"><span class="pre">command()</span></code></a> just that the <cite>cls</cite>
+parameter is set to <a class="reference internal" href="#aclick.Group" title="aclick.Group"><code class="xref py py-class docutils literal notranslate"><span class="pre">Group</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.configuration_option">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">configuration_option</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">param_decls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_configuration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.decorators.F</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.decorators.F</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/decorators.py#L152-L200"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.configuration_option" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a <code class="docutils literal notranslate"><span class="pre">--configuration</span></code> option which allows to specify a configuration
+file to read the default configuration from.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>param_decls</strong> – One or more option names. Defaults to the single
+value <code class="docutils literal notranslate"><span class="pre">&quot;--configuration&quot;</span></code>.</p></li>
+<li><p><strong>parse_configuration</strong> – Function used to parse configuration. By default a json parser is used.</p></li>
+<li><p><strong>kwargs</strong> – Extra arguments are passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">option()</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.utils.copy_signature">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">copy_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other_function</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_return_annotation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.utils.T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.utils.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/utils.py#L233-L266"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.utils.copy_signature" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a decorator used to copy signature from another function
+called inside this function. The parameters from the called function
+are added only if current function is able to receive them (it has
+either <cite>*args</cite>, or <cite>**kwargs</cite> argument. The signature is copied including
+the description of all parameters.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">a</span><span class="p">(</span><span class="n">param1</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="nd">@copy_signature</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">b</span><span class="p">(</span><span class="n">param2</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">a</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other_function</strong> – Signature to extend the current function with (i.e. the called function)</p></li>
+<li><p><strong>copy_return_annotation</strong> – Whether the return type annotation should be taken from the called function.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.utils.default_from_str">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">default_from_str</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.utils.TType</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.utils.TType</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/utils.py#L293-L336"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.utils.default_from_str" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">default_from_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">aclick.utils.TType</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">aclick.utils.TType</span></span></span></dt>
+<dd><p>A decorator that extends the class with the <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">__str__()</span></code>, and <code class="xref py py-func docutils literal notranslate"><span class="pre">__str_with_dashes_option__()</span></code>
+methods. The <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code> method is a classmethod and it parses a string value into
+the instance of the class. If some class derive this class, this class will be able to parse
+the string value as these instances as well. In this case, <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code> should be called on this
+type (parent class).</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">__str__()</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">__str_with_dashes_option__()</span></code> are implemented as inverse of <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code> (i.e., the
+strings generated by these methods can be parsed using <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code> method). <code class="xref py py-func docutils literal notranslate"><span class="pre">__str_with_dashes_option__()</span></code>
+further allows to specify if the underscores in class names and property names should be converted to dashes.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@default_from_str</span>
+<span class="k">class</span> <span class="nc">A</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop1</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop1</span> <span class="o">=</span> <span class="n">prop1</span>
+
+<span class="nb">str</span><span class="p">(</span><span class="n">A</span><span class="p">(</span><span class="mi">42</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;a(prop1=42)&quot;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="commands">
+<h2>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.Command">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">Command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">inspect.Signature</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hierarchical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_parameter_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#aclick.ParameterRenamer" title="aclick.core.ParameterRenamer"><span class="pre">aclick.core.ParameterRenamer</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_defaults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dashes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_inline_examples_help</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L105-L534"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Command class extend <cite>click.Command</cite> class and it automatically
+parses callback’s signature and generates the parameters.
+It also supports dynamic parsing, where based on some
+parameter, other parameters may be added, which is used in the
+hierarchical parsing (see <cite>is_hierarchical</cite>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – the name of the command to use unless a group overrides it.</p></li>
+<li><p><strong>context_settings</strong> – an optional dictionary with defaults that are
+passed to the context object.</p></li>
+<li><p><strong>callback</strong> – the callback to invoke.  This is optional.</p></li>
+<li><p><strong>signature</strong> – signature to be used for automatic parameter registration.
+If no signature is specified, it is parsed automatically
+from the callback.</p></li>
+<li><p><strong>hierarchical</strong> – whether to parse complex types using hierarchical
+parsing instead of inline parsing. In hierarchical
+parsing the complex class options are expanded into
+individual options corresponding to individual
+properties. Note that some types are not supported
+with hierarchical parsing. Default is to use hierarchical
+parsing.</p></li>
+<li><p><strong>map_parameter_name</strong> – a function that maps from parameter paths
+(e.g. param1.property1.subproperty2) into
+parameter name used in parsing.</p></li>
+<li><p><strong>params</strong> – the parameters to register with this command. This can
+be either <code class="xref py py-class docutils literal notranslate"><span class="pre">Option</span></code> or <code class="xref py py-class docutils literal notranslate"><span class="pre">Argument</span></code> objects.
+These parameters override automatically generated params
+if they share the same name.</p></li>
+<li><p><strong>help</strong> – the help string to use for this command. The callback’s
+docstring is parsed if no help is passed.</p></li>
+<li><p><strong>epilog</strong> – like the help string but it’s printed at the end of the
+help page after everything else.</p></li>
+<li><p><strong>short_help</strong> – the short help to use for this command.  This is
+shown on the command listing of the parent command.
+The callback’s docstring is parsed if no help is passed.</p></li>
+<li><p><strong>show_defaults</strong> – whether to show defaults for all parameters.
+Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>use_dashes</strong> – use dashes instead of underscores in parameter and class
+names. Default is <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>num_inline_examples_help</strong> – limits the number of examples to show in
+help for each inline type argument. If the
+value is -1, all possible values are shown.
+Default is 0.</p></li>
+<li><p><strong>add_help_option</strong> – by default each command registers a <code class="docutils literal notranslate"><span class="pre">--help</span></code>
+option.  This can be disabled by this parameter.</p></li>
+<li><p><strong>no_args_is_help</strong> – this controls what happens if no arguments are
+provided.  This option is disabled by default.
+If enabled this will add <code class="docutils literal notranslate"><span class="pre">--help</span></code> as argument
+if no arguments are passed</p></li>
+<li><p><strong>hidden</strong> – hide this command from help outputs.</p></li>
+<li><p><strong>deprecated</strong> – issues a message indicating that
+the command is deprecated.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aclick.Command.context_class">
+<span class="sig-name descname"><span class="pre">context_class</span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L43-L64"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Command.context_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#aclick.Context" title="aclick.core.Context"><code class="xref py py-class docutils literal notranslate"><span class="pre">aclick.core.Context</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aclick.Command.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">click.core.Context</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L524-L534"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Command.invoke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a context, this invokes the attached callback (if it exists)
+in the right way.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aclick.Command.make_context">
+<span class="sig-name descname"><span class="pre">make_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L195-L202"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Command.make_context" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function when given an info name and arguments will kick
+off the parsing and create a new <a class="reference internal" href="#aclick.Context" title="aclick.Context"><code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></a>.  It does not
+invoke the actual command callback though.</p>
+<p>To quickly customize the context class used without overriding
+this method, set the <a class="reference internal" href="#aclick.Command.context_class" title="aclick.Command.context_class"><code class="xref py py-attr docutils literal notranslate"><span class="pre">context_class</span></code></a> attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>info_name</strong> – the info name for this invocation.  Generally this
+is the most descriptive name for the script or
+command.  For the toplevel script it’s usually
+the name of the script, for commands below it it’s
+the name of the command.</p></li>
+<li><p><strong>args</strong> – the arguments to parse as list of strings.</p></li>
+<li><p><strong>parent</strong> – the parent context if available.</p></li>
+<li><p><strong>extra</strong> – extra keyword arguments forwarded to the context
+constructor.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.0: </span>Added the <a class="reference internal" href="#aclick.Command.context_class" title="aclick.Command.context_class"><code class="xref py py-attr docutils literal notranslate"><span class="pre">context_class</span></code></a> attribute.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aclick.Command.parse_args">
+<span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">click.core.Context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L478-L522"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Command.parse_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a context and a list of arguments this creates the parser
+and parses the arguments, then modifies the context as necessary.
+This is automatically invoked by <a class="reference internal" href="#aclick.Command.make_context" title="aclick.Command.make_context"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_context()</span></code></a>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.Group">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">Group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commands</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">click.core.Command</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">click.core.Command</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">attrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L537-L627"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Group" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="aclick.Group.command">
+<span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#aclick.Command" title="aclick.core.Command"><span class="pre">aclick.core.Command</span></a></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L548-L580"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Group.command" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#aclick.Command" title="aclick.core.Command"><span class="pre">aclick.core.Command</span></a><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>A shortcut decorator for declaring and attaching a command to
+the group. This takes the same arguments as <a class="reference internal" href="#aclick.command" title="aclick.command"><code class="xref py py-func docutils literal notranslate"><span class="pre">command()</span></code></a> and
+immediately registers the created command with this group by
+calling <code class="xref py py-meth docutils literal notranslate"><span class="pre">add_command()</span></code>.
+To customize the command class used, set the
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">command_class</span></code> attribute.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aclick.Group.group">
+<span class="sig-name descname"><span class="pre">group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#aclick.Group" title="aclick.core.Group"><span class="pre">aclick.core.Group</span></a></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L592-L627"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Group.group" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#aclick.Group" title="aclick.core.Group"><span class="pre">aclick.core.Group</span></a><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>A shortcut decorator for declaring and attaching a group to
+the group. This takes the same arguments as <a class="reference internal" href="#aclick.group" title="aclick.group"><code class="xref py py-func docutils literal notranslate"><span class="pre">group()</span></code></a> and
+immediately registers the created group with this group by
+calling <code class="xref py py-meth docutils literal notranslate"><span class="pre">add_command()</span></code>.
+To customize the group class used, set the <code class="xref py py-attr docutils literal notranslate"><span class="pre">group_class</span></code>
+attribute.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="types">
+<h2>Types<a class="headerlink" href="#types" title="Permalink to this headline">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.List">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">List</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.List'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L108-L138"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.List" title="Permalink to this definition">¶</a></dt>
+<dd><p>This type parses a list of values separated by commas as individual
+instances.
+This type supports inline
+class parsing. A complicated structure of classes can be parsed
+using this type. See <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_class_structure()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>inner_type</strong> – Type of the objects in the list.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.ClassUnion">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">ClassUnion</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.ClassUnion'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L197-L271"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.ClassUnion" title="Permalink to this definition">¶</a></dt>
+<dd><p>This type parses the string value as the instance of
+one of specified classes. A complicated structure of
+classes can be parsed using this type.
+See <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_class_structure()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>classes</strong> – List of classes to parse into.</p></li>
+<li><p><strong>known_classes</strong> – List of classes supported at deeper levels (e.g. as property values).</p></li>
+<li><p><strong>num_examples_on_error</strong> – Number of examples to show if there was an error during parsing.
+If the value is -1, all possible examples are shown. Default is 3.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.Tuple">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">Tuple</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.Tuple'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L89-L105"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.Tuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default behavior of Click is to apply a type on a value directly.
+This works well in most cases, except for when <cite>nargs</cite> is set to a fixed
+count and different types should be used for different items.  In this
+case the <a class="reference internal" href="#aclick.types.Tuple" title="aclick.types.Tuple"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tuple</span></code></a> type can be used.  This type can only be used
+if <cite>nargs</cite> is set to a fixed number.
+This can be selected by using a Python tuple literal as a type.</p>
+<p>As opposed to Click’s original Tuple type, this type supports inline
+class parsing. A complicated structure of classes can be parsed
+using this type. See <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_class_structure()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>types</strong> – a list of types that should be used for the tuple items.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.ParameterGroup">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">ParameterGroup</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.ParameterGroup'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L28-L86"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.ParameterGroup" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.ClassHierarchicalOption">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">ClassHierarchicalOption</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.ClassHierarchicalOption'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L287-L308"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.ClassHierarchicalOption" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.UnionTypeHierarchicalOption">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">UnionTypeHierarchicalOption</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.UnionTypeHierarchicalOption'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L311-L386"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.UnionTypeHierarchicalOption" title="Permalink to this definition">¶</a></dt>
+<dd><p>Options are usually optional values on the command line and
+have some extra features that arguments don’t have.</p>
+<p>All other parameters are passed onwards to the parameter constructor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>show_default</strong> – Show the default value for this option in its
+help text. Values are not shown by default, unless
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">Context.show_default</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>. If this value is a
+string, it shows that string in parentheses instead of the
+actual value. This is particularly useful for dynamic options.
+For single option boolean flags, the default remains hidden if
+its value is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>show_envvar</strong> – Controls if an environment variable should be
+shown on the help page. Normally, environment variables are not
+shown.</p></li>
+<li><p><strong>prompt</strong> – If set to <code class="docutils literal notranslate"><span class="pre">True</span></code> or a non empty string then the
+user will be prompted for input. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code> the prompt
+will be the option name capitalized.</p></li>
+<li><p><strong>confirmation_prompt</strong> – Prompt a second time to confirm the
+value if it was prompted for. Can be set to a string instead of
+<code class="docutils literal notranslate"><span class="pre">True</span></code> to customize the message.</p></li>
+<li><p><strong>prompt_required</strong> – If set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the user will be
+prompted for input only when the option was specified as a flag
+without a value.</p></li>
+<li><p><strong>hide_input</strong> – If this is <code class="docutils literal notranslate"><span class="pre">True</span></code> then the input on the prompt
+will be hidden from the user. This is useful for password input.</p></li>
+<li><p><strong>is_flag</strong> – forces this option to act as a flag.  The default is
+auto detection.</p></li>
+<li><p><strong>flag_value</strong> – which value should be used for this flag if it’s
+enabled.  This is set to a boolean automatically if
+the option string contains a slash to mark two options.</p></li>
+<li><p><strong>multiple</strong> – if this is set to <cite>True</cite> then the argument is accepted
+multiple times and recorded.  This is similar to <code class="docutils literal notranslate"><span class="pre">nargs</span></code>
+in how it works but supports arbitrary number of
+arguments.</p></li>
+<li><p><strong>count</strong> – this flag makes an option increment an integer.</p></li>
+<li><p><strong>allow_from_autoenv</strong> – if this is enabled then the value of this
+parameter will be pulled from an environment
+variable in case a prefix is defined on the
+context.</p></li>
+<li><p><strong>help</strong> – the help string.</p></li>
+<li><p><strong>hidden</strong> – hide this option from help outputs.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>Help text indentation is cleaned here instead of only in the
+<code class="docutils literal notranslate"><span class="pre">&#64;option</span></code> decorator.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>The <code class="docutils literal notranslate"><span class="pre">show_default</span></code> parameter overrides
+<code class="docutils literal notranslate"><span class="pre">Context.show_default</span></code>.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>The default of a single option boolean flag is not shown if the
+default value is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.0.1: </span><code class="docutils literal notranslate"><span class="pre">type</span></code> is detected from <code class="docutils literal notranslate"><span class="pre">flag_value</span></code> if given.</p>
+</div>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aclick.types.OptionalTypeHierarchicalOption">
+<span class="sig-prename descclassname"><span class="pre">aclick.types.</span></span><span class="sig-name descname"><span class="pre">OptionalTypeHierarchicalOption</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;class</span> <span class="pre">'aclick.types.OptionalTypeHierarchicalOption'&gt;</span></em><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/types.py#L389-L462"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.types.OptionalTypeHierarchicalOption" title="Permalink to this definition">¶</a></dt>
+<dd><p>Options are usually optional values on the command line and
+have some extra features that arguments don’t have.</p>
+<p>All other parameters are passed onwards to the parameter constructor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>show_default</strong> – Show the default value for this option in its
+help text. Values are not shown by default, unless
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">Context.show_default</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>. If this value is a
+string, it shows that string in parentheses instead of the
+actual value. This is particularly useful for dynamic options.
+For single option boolean flags, the default remains hidden if
+its value is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>show_envvar</strong> – Controls if an environment variable should be
+shown on the help page. Normally, environment variables are not
+shown.</p></li>
+<li><p><strong>prompt</strong> – If set to <code class="docutils literal notranslate"><span class="pre">True</span></code> or a non empty string then the
+user will be prompted for input. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code> the prompt
+will be the option name capitalized.</p></li>
+<li><p><strong>confirmation_prompt</strong> – Prompt a second time to confirm the
+value if it was prompted for. Can be set to a string instead of
+<code class="docutils literal notranslate"><span class="pre">True</span></code> to customize the message.</p></li>
+<li><p><strong>prompt_required</strong> – If set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the user will be
+prompted for input only when the option was specified as a flag
+without a value.</p></li>
+<li><p><strong>hide_input</strong> – If this is <code class="docutils literal notranslate"><span class="pre">True</span></code> then the input on the prompt
+will be hidden from the user. This is useful for password input.</p></li>
+<li><p><strong>is_flag</strong> – forces this option to act as a flag.  The default is
+auto detection.</p></li>
+<li><p><strong>flag_value</strong> – which value should be used for this flag if it’s
+enabled.  This is set to a boolean automatically if
+the option string contains a slash to mark two options.</p></li>
+<li><p><strong>multiple</strong> – if this is set to <cite>True</cite> then the argument is accepted
+multiple times and recorded.  This is similar to <code class="docutils literal notranslate"><span class="pre">nargs</span></code>
+in how it works but supports arbitrary number of
+arguments.</p></li>
+<li><p><strong>count</strong> – this flag makes an option increment an integer.</p></li>
+<li><p><strong>allow_from_autoenv</strong> – if this is enabled then the value of this
+parameter will be pulled from an environment
+variable in case a prefix is defined on the
+context.</p></li>
+<li><p><strong>help</strong> – the help string.</p></li>
+<li><p><strong>hidden</strong> – hide this option from help outputs.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>Help text indentation is cleaned here instead of only in the
+<code class="docutils literal notranslate"><span class="pre">&#64;option</span></code> decorator.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>The <code class="docutils literal notranslate"><span class="pre">show_default</span></code> parameter overrides
+<code class="docutils literal notranslate"><span class="pre">Context.show_default</span></code>.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.1.0: </span>The default of a single option boolean flag is not shown if the
+default value is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified changed">Changed in version 8.0.1: </span><code class="docutils literal notranslate"><span class="pre">type</span></code> is detected from <code class="docutils literal notranslate"><span class="pre">flag_value</span></code> if given.</p>
+</div>
+</dd></dl>
+
+</section>
+<section id="utilities">
+<h2>Utilities<a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.utils.parse_class_structure">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">parse_class_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">known_classes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/utils.py#L345-L506"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.utils.parse_class_structure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses a string representing a structure of classes into a
+tree representation of the classes. This method is directly
+used by the <a class="reference internal" href="#aclick.utils.default_from_str" title="aclick.utils.default_from_str"><code class="xref py py-func docutils literal notranslate"><span class="pre">default_from_str()</span></code></a> decorator.</p>
+<p>The following conventions are used:</p>
+<ul class="simple">
+<li><p>Classes are represented as <cite>class_name(arg1, arg2, named_arg1=val3, …)</cite></p></li>
+<li><p>Lists are represented as <cite>[val1, val2, …]</cite></p></li>
+<li><p>Tuples are represented as <cite>(val1, val2, …)</cite></p></li>
+<li><p>Dicts are represented as <cite>{key1=val1, key2=val2, …}</cite></p></li>
+<li><p>Strings can be represented as <cite>value</cite> or <cite>“complicated ‘value’”</cite> or <cite>‘complicated “value”’</cite></p></li>
+<li><p>Numbers and bool are represented as strings: <cite>15</cite>, <cite>16.2</cite>, <cite>true</cite></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> – String value to parse.</p></li>
+<li><p><strong>classes</strong> – List of classes to parse the string into.</p></li>
+<li><p><strong>known_classes</strong> – List of known classes that can be used during parsing on
+lower levels (e.g. as a property value).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>An instance of one of the classes is returned.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.utils.as_dict">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">as_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/utils.py#L700-L767"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.utils.as_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary where all classes in the class structure are replaced with
+simple dictionaries. It can be useful for serilization.</p>
+<p>This performs the inverse operation to <a class="reference internal" href="#aclick.utils.from_dict" title="aclick.utils.from_dict"><code class="xref py py-func docutils literal notranslate"><span class="pre">from_dict()</span></code></a>.
+Note that if <code class="docutils literal notranslate"><span class="pre">tp</span></code> is not a class the returned value may not be a dictionary
+but any value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> – value that is used to generate the dictionary.</p></li>
+<li><p><strong>tp</strong> – type of the passed object. If no type is passes, the actual type of <code class="docutils literal notranslate"><span class="pre">obj</span></code> is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.utils.from_dict">
+<span class="sig-prename descclassname"><span class="pre">aclick.utils.</span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/utils.py#L595-L697"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.utils.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses a nested dictionary structure into a specific type.
+This performs the inverse operation to <a class="reference internal" href="#aclick.utils.as_dict" title="aclick.utils.as_dict"><code class="xref py py-func docutils literal notranslate"><span class="pre">as_dict()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tp</strong> – type to parse the dictionary into.</p></li>
+<li><p><strong>config</strong> – dictionary to parse to a specific type.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.parse_configuration">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">parse_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#aclick.Context" title="aclick.core.Context"><span class="pre">aclick.core.Context</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L44-L71"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.parse_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses the configuration file using one of the supported configuration providers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fp</strong> – opened configuration file stream</p></li>
+<li><p><strong>ctx</strong> – context providing additional information used for parsing</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.register_configuration_provider">
+<span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">register_configuration_provider</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regex</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.configuration.TConfigurationProvider</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">aclick.configuration.TConfigurationProvider</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L28-L41"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.register_configuration_provider" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that registers a new configuration provider.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>regex</strong> – Regex expression that matches the supported filenames.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.configuration.restrict_parse_configuration">
+<span class="sig-prename descclassname"><span class="pre">aclick.configuration.</span></span><span class="sig-name descname"><span class="pre">restrict_parse_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parse_configuration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.configuration.ConfigurationProvider</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">aclick.configuration.ConfigurationProvider</span></span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L153-L190"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.configuration.restrict_parse_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restrict the parse_configuration function to a specific path.
+This is useful if your function takes a shared parameter of specific class
+for which you want to store the configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – path to the parameter for which you want to parse the configuration.</p></li>
+<li><p><strong>parse_configuration</strong> – parse_configuration function that will be used for parsing.
+Default is to use the registered configuration providers.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.configuration.parse_json_configuration">
+<span class="sig-prename descclassname"><span class="pre">aclick.configuration.</span></span><span class="sig-name descname"><span class="pre">parse_json_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#aclick.Context" title="aclick.core.Context"><span class="pre">aclick.core.Context</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L74-L84"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.configuration.parse_json_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a configuration stored in a json file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fp</strong> – opened json file stream</p></li>
+<li><p><strong>ctx</strong> – context providing additional information used for parsing</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.configuration.parse_yaml_configuration">
+<span class="sig-prename descclassname"><span class="pre">aclick.configuration.</span></span><span class="sig-name descname"><span class="pre">parse_yaml_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#aclick.Context" title="aclick.core.Context"><span class="pre">aclick.core.Context</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L87-L97"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.configuration.parse_yaml_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a configuration stored in a yaml (.yaml or .yml) file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fp</strong> – opened yaml file stream</p></li>
+<li><p><strong>ctx</strong> – context providing additional information used for parsing</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aclick.configuration.parse_gin_configuration">
+<span class="sig-prename descclassname"><span class="pre">aclick.configuration.</span></span><span class="sig-name descname"><span class="pre">parse_gin_configuration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fp</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#aclick.Context" title="aclick.core.Context"><span class="pre">aclick.core.Context</span></a></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/configuration.py#L100-L147"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.configuration.parse_gin_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads a configuration stored as a gin config file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fp</strong> – opened gin file stream</p></li>
+<li><p><strong>ctx</strong> – context providing additional information used for parsing</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="other-classes">
+<h2>Other classes<a class="headerlink" href="#other-classes" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.ParameterRenamer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">ParameterRenamer</span></span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L67-L80"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.ParameterRenamer" title="Permalink to this definition">¶</a></dt>
+<dd><p>A base class used as parameter renamer for a <a class="reference internal" href="#aclick.Command" title="aclick.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a>.
+The derived class must implement the call method that
+maps from the original name to a new name.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.RegexParameterRenamer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">RegexParameterRenamer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">patterns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L630-L677"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.RegexParameterRenamer" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="#aclick.RegexParameterRenamer" title="aclick.RegexParameterRenamer"><code class="xref py py-class docutils literal notranslate"><span class="pre">RegexParameterRenamer</span></code></a> replaces parameter name
+using regex matching and substitution. The first pattern
+that matches the parameter name is used and the matched part
+of the parameter name is substituted with the replacement value.
+If no regex expression matches the parameter name, the name is
+returned unchanged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attr patterns</dt>
+<dd class="field-odd"><p>List of pairs of patterns and replacement values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.FlattenParameterRenamer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">FlattenParameterRenamer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_levels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L680-L701"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.FlattenParameterRenamer" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="#aclick.FlattenParameterRenamer" title="aclick.FlattenParameterRenamer"><code class="xref py py-class docutils literal notranslate"><span class="pre">FlattenParameterRenamer</span></code></a> is used to map
+parameters into lower level parameters (e.g. <cite>“class1.prop1”</cite> into <cite>“prop1”</cite>).
+This is especially useful for hierarchical parsing, where properties
+deep in the class structure can have long names.
+The number of levels to remove is a parameter of the class.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aclick.Context">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aclick.</span></span><span class="sig-name descname"><span class="pre">Context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback_signature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">inspect.Signature</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">aclick.types.ParameterGroup</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_group_contexts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/jkulhanek/aclick/blob/v0.2.3/aclick/core.py#L43-L64"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aclick.Context" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">API</a><ul>
+<li><a class="reference internal" href="#decorators">Decorators</a></li>
+<li><a class="reference internal" href="#commands">Commands</a></li>
+<li><a class="reference internal" href="#types">Types</a></li>
+<li><a class="reference internal" href="#utilities">Utilities</a></li>
+<li><a class="reference internal" href="#configuration">Configuration</a></li>
+<li><a class="reference internal" href="#other-classes">Other classes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hierarchical-parsing.html">Hierarchical parsing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline-types.html">Inline types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter-renaming.html">Parameter renaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="loading-configuration.html">Loading configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced features</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>

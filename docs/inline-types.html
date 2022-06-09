@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inline types &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Parameter renaming" href="parameter-renaming.html" />
+    <link rel="prev" title="Hierarchical parsing" href="hierarchical-parsing.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="parameter-renaming.html" title="Parameter renaming"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="hierarchical-parsing.html" title="Hierarchical parsing"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Inline types</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="inline-types">
+<h1>Inline types<a class="headerlink" href="#inline-types" title="Permalink to this headline">¶</a></h1>
+<p>Inline types allows complex class structures to be parsed as string.
+First, we will motivate the reader by a simple example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">aclick</span><span class="o">,</span> <span class="nn">click</span><span class="o">,</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
+
+<span class="k">class</span> <span class="nc">ModelA</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">=</span> <span class="n">n_layers</span>
+
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Training model A with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span><span class="si">}</span><span class="s1"> layers.&#39;</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">ModelB</span><span class="p">(</span><span class="n">ModelA</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">n_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_blocks</span> <span class="o">=</span> <span class="n">n_blocks</span>
+
+    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Training model B with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_blocks</span><span class="si">}</span><span class="s1"> blocks.&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">hierarchical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">ModelA</span><span class="p">,</span> <span class="n">ModelB</span><span class="p">]):</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>We can invoke the script as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python hello.py --model &#39;model-b(test, n-layers=2)&#39;
+Training model B with 5 blocks.
+</pre></div>
+</div>
+<p>Note, that by default complex classes will be parsed using <a class="reference internal" href="hierarchical-parsing.html"><span class="doc">hierarchical parsing</span></a>.
+If you want all complex class types to be parsed using inline parsing,
+simply turn off hierarchical parsing by passing <code class="docutils literal notranslate"><span class="pre">hierarchical</span> <span class="pre">=</span> <span class="pre">False</span></code> to the
+class constructor. If you want to keep using hierarchical parsing, but
+use inline parsing for one type only, use the <code class="xref py py-func docutils literal notranslate"><span class="pre">aclick.default_from_str()</span></code>
+decorator (or implement <code class="xref py py-func docutils literal notranslate"><span class="pre">from_str()</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">__str__()</span></code> methods).</p>
+<section id="custom-classes">
+<h2>Custom classes<a class="headerlink" href="#custom-classes" title="Permalink to this headline">¶</a></h2>
+<p>In inline parsing, user-defined classes can be naturally parsed with the following structure:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">class-name(arg1,</span> <span class="pre">...,</span> <span class="pre">argM,</span> <span class="pre">named-arg-1=value1,</span> <span class="pre">...,</span> <span class="pre">named-arg-n=valueN)</span></code></p>
+</div></blockquote>
+<p>Where the class <code class="docutils literal notranslate"><span class="pre">ClassName</span></code> accepts <code class="docutils literal notranslate"><span class="pre">M</span></code> positional arguments and all named
+arguments as well. Each argument value can itself be a complex structure of classes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Schedule</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">constants</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constants</span> <span class="o">=</span> <span class="n">constants</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;Schedule(&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s1">&quot;, constants=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">constants</span><span class="si">}</span><span class="s1">)&#39;</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="n">Schedule</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">hierarchical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This can be invoked as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model &#39;model(schedule(&quot;schedule 1&quot;, constants=[1.5, 2.0]))&#39;
+Model(learning_rate=Schedule(&quot;schedule 1&quot;, constants=[1.5, 2.0]), num_features=5)
+</pre></div>
+</div>
+</section>
+<section id="union-of-classes">
+<h2>Union of classes<a class="headerlink" href="#union-of-classes" title="Permalink to this headline">¶</a></h2>
+<p>We can specify multiple possible types for a parameter by using
+<cite>t.Union</cite> type. The specified type will then be constructed from the passed
+arguments.
+This scenario is illustrated in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ModelA</span><span class="p">:</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ModelB</span><span class="p">:</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="n">num_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">hierarchical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">ModelA</span><span class="p">,</span> <span class="n">ModelB</span><span class="p">]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Training </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The output will look as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model &#39;model-b(num-layers=3)&#39;
+Training ModelB(learning_rate=0.2, num_layers=3)
+</pre></div>
+</div>
+</section>
+<section id="container-types">
+<span id="id1"></span><h2>Container types<a class="headerlink" href="#container-types" title="Permalink to this headline">¶</a></h2>
+<p>The inline class representation natively supports <cite>list</cite>, <cite>tuple</cite>, <cite>dict</cite>, and <cite>OrderedDict</cite>.</p>
+<ul>
+<li><p><cite>list</cite> or ‘tuple’ are represented as a comma-separated list of items inside of square brackets or parentheses:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="s2">&quot;string val1&quot;</span><span class="p">,</span> <span class="s1">&#39;string val2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">string</span><span class="o">-</span><span class="n">val</span><span class="o">-</span><span class="n">N</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>or:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="s2">&quot;string val1&quot;</span><span class="p">,</span> <span class="s1">&#39;string val2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">string</span><span class="o">-</span><span class="n">val</span><span class="o">-</span><span class="n">N</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p><cite>dict</cite> or <cite>OrderedDict</cite> are represented as a comma-separated list of pairs <code class="docutils literal notranslate"><span class="pre">key=value</span></code> inside of curly brackets:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="n">key_1</span><span class="o">=</span><span class="s2">&quot;string val1&quot;</span><span class="p">,</span> <span class="n">key_2</span><span class="o">=</span><span class="s1">&#39;string val2&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">key_n</span><span class="o">=</span><span class="n">string</span><span class="o">-</span><span class="n">val</span><span class="o">-</span><span class="n">N</span><span class="p">}</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>We demonstrate all types in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Example</span><span class="p">:</span>
+    <span class="n">prop_list</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">prop_tuple</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+    <span class="n">prop_dict</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span>
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">hierarchical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Example</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With the corresponding output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python main.py --x &#39;example([&quot;str 1&quot;, &quot;str 2&quot;], (10, 3.14), {p1=1, p2=2})&#39;
+Example(prop_list=[&#39;str 1&#39;, &#39;str 2&#39;], prop_tuple=(10, 3.14), prop_dict={&#39;p1&#39;: 1, &#39;p2&#39;: 2})
+</pre></div>
+</div>
+</section>
+<section id="showing-class-examples">
+<h2>Showing class examples<a class="headerlink" href="#showing-class-examples" title="Permalink to this headline">¶</a></h2>
+<p>For the <cite>aclick</cite> command, examples can be shown for each inline type parameter. In order to enable examples,
+set the parameter <cite>num_inline_examples_help</cite> to a number greater to 0 or to -1. This number limits the number
+of shown examples. Note that the examples are generated by expanding all union types to all possible values and,
+therefore, can be a large number for classes with lots of <cite>Union</cite> properties. Therefore, use the value of -1 with
+care.</p>
+<p>Also, by default if a value of an inline-typed parameter is incorrect, at most three examples are shown in the
+error message.</p>
+<p>We show the inline type examples in the following code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Example</span><span class="p">:</span>
+    <span class="n">prop_list</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">prop_tuple</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+    <span class="n">prop_dict</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span>
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">hierarchical</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">num_inline_examples_help</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Example</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With the corresponding output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python main.py --help
+Usage: main.py [OPTIONS]
+
+Options:
+  --help           Show this message and exit.
+  --x CLASS UNION  Examples of allowed values:
+                   example(
+                     prop-list=({str},
+                       ...),
+                     prop-tuple=({int},
+                       {float}),
+                     prop-dict={{str}={int},
+                       ...})
+                   
+                   example(
+                     prop-list=({str},
+                       ...),
+                     prop-tuple=({int},
+                       {float}),
+                     prop-dict={{str}=None,
+                       ...})
+                   
+                      [required]
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">Inline types</a><ul>
+<li><a class="reference internal" href="#custom-classes">Custom classes</a></li>
+<li><a class="reference internal" href="#union-of-classes">Union of classes</a></li>
+<li><a class="reference internal" href="#container-types">Container types</a></li>
+<li><a class="reference internal" href="#showing-class-examples">Showing class examples</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hierarchical-parsing.html">Hierarchical parsing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Inline types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter-renaming.html">Parameter renaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="loading-configuration.html">Loading configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced features</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>

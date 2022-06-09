@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Parameter renaming &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Loading configuration" href="loading-configuration.html" />
+    <link rel="prev" title="Inline types" href="inline-types.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="loading-configuration.html" title="Loading configuration"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="inline-types.html" title="Inline types"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Parameter renaming</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="parameter-renaming">
+<h1>Parameter renaming<a class="headerlink" href="#parameter-renaming" title="Permalink to this headline">¶</a></h1>
+<p>All generated parameters of a command can be renamed by passing a callback
+function to the <code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code> constructor. This function is given the original
+name and returns a new name of the parameter. In the <cite>aclick</cite> library, there
+are two renamer classes implemented by default: <code class="xref py py-class docutils literal notranslate"><span class="pre">RegexParameterRenamer</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">FlattenParameterRenamer</span></code></p>
+<section id="renaming-parameters-with-a-regex-expression">
+<h2>Renaming parameters with a regex expression<a class="headerlink" href="#renaming-parameters-with-a-regex-expression" title="Permalink to this headline">¶</a></h2>
+<p>The class <code class="xref py py-class docutils literal notranslate"><span class="pre">RegexParameterRenamer</span></code> renames the parameter using regex expressions.
+The constuctor of the class accepts a list of pairs of regex expression and the corresponding
+replacement value. First, the list is searched until a match is found. If no expression matches
+the parameter name the name is left unchanged. After the matching expression is found, the matching
+part of the parameter name is replaced with the replacement value. Note, that the replacement value
+can reference captured groups using <cite>1</cite>, <cite>2</cite>, … syntax.</p>
+<p>We will demonstrate regex parameter renaming in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">map_parameter_name</span><span class="o">=</span><span class="n">aclick</span><span class="o">.</span><span class="n">RegexParameterRenamer</span><span class="p">([(</span><span class="s2">&quot;model\.(.*)_&quot;</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;\1_param_&quot;</span><span class="p">)]))</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&#39;&#39;lr: </span><span class="si">{</span><span class="n">learning_rate</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_features: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">num_features</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_epochs: </span><span class="si">{</span><span class="n">num_epochs</span><span class="si">}</span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                        Show this message and exit.
+  --learning-param-rate FLOAT   Learning rate  [default: 0.0001]
+  --num-param-features INTEGER  Number of features  [default: 5]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+<p>In the example the regex expression matched prefix <cite>model.</cite>, captured the following text until
+an underscore and replaced this prefix with the matched text after <cite>model.</cite> followed by <cite>_param_</cite>.
+Therefore, we have the following replacements:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">-&gt;</span>  <span class="n">learning_param_rate</span>
+<span class="n">model</span><span class="o">.</span><span class="n">num_features</span> <span class="o">-&gt;</span>  <span class="n">num_param_features</span>
+<span class="n">num_epochs</span> <span class="o">-&gt;</span> <span class="n">num_epochs</span>
+</pre></div>
+</div>
+</section>
+<section id="flattening-nested-parameter-structure">
+<h2>Flattening nested parameter structure<a class="headerlink" href="#flattening-nested-parameter-structure" title="Permalink to this headline">¶</a></h2>
+<p>With a deep class structure the parameter names can grow long.
+The class <code class="xref py py-class docutils literal notranslate"><span class="pre">FlattenParameterRenamer</span></code> can be used to prevent such long names.
+In hierarchical parsing the name of a parameter is the full path to the parameter.
+For example if a function <cite>train</cite> accepts parameter <cite>model</cite> of class <cite>Model</cite>, the
+<cite>Model</cite>’s parameters will start with the prefix <cite>model.</cite> (all dots and underscores are
+replaced with dashes at the end). By using the <code class="xref py py-class docutils literal notranslate"><span class="pre">FlattenParameterRenamer</span></code>, we
+can remove one or more parts of the parameter path from the parameter name.</p>
+<p>This can be seen in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Schedule</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">constant</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">constant</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="n">Schedule</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="n">map_parameter_name</span><span class="o">=</span><span class="n">aclick</span><span class="o">.</span><span class="n">FlattenParameterRenamer</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                          Show this message and exit.
+  --learning-rate-type TEXT       [required]
+  --learning-rate-constant FLOAT  [default: 0.0001]
+  --num-features INTEGER          Number of features  [default: 5]
+  --num-epochs INTEGER            [required]
+</pre></div>
+</div>
+<p>In this example, one level is removed from the parameter paths. Therefore
+we have the following replacements:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span><span class="o">.</span><span class="n">learning_rate</span><span class="o">.</span><span class="n">type</span> <span class="o">-&gt;</span>  <span class="n">learning_rate</span><span class="o">.</span><span class="n">type</span>
+<span class="n">model</span><span class="o">.</span><span class="n">learning_rate</span><span class="o">.</span><span class="n">constant</span> <span class="o">-&gt;</span>  <span class="n">learning_rate</span><span class="o">.</span><span class="n">constant</span>
+<span class="n">model</span><span class="o">.</span><span class="n">num_features</span> <span class="o">-&gt;</span>  <span class="n">num_features</span>
+<span class="n">num_epochs</span> <span class="o">-&gt;</span> <span class="n">num_epochs</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">Parameter renaming</a><ul>
+<li><a class="reference internal" href="#renaming-parameters-with-a-regex-expression">Renaming parameters with a regex expression</a></li>
+<li><a class="reference internal" href="#flattening-nested-parameter-structure">Flattening nested parameter structure</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hierarchical-parsing.html">Hierarchical parsing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline-types.html">Inline types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Parameter renaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="loading-configuration.html">Loading configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced features</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>

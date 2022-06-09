@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Advanced features &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API" href="api.html" />
+    <link rel="prev" title="Loading configuration" href="loading-configuration.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="loading-configuration.html" title="Loading configuration"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Advanced features</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="advanced-features">
+<h1>Advanced features<a class="headerlink" href="#advanced-features" title="Permalink to this headline">¶</a></h1>
+<section id="getting-values-of-all-parameters">
+<h2>Getting values of all parameters<a class="headerlink" href="#getting-values-of-all-parameters" title="Permalink to this headline">¶</a></h2>
+<p>All parameter values can be injected to the function
+call using a special <code class="xref py py-class docutils literal notranslate"><span class="pre">AllParameters</span></code> type.
+If a parameter has this annotation,
+a dictionary containing all parameters will
+be passed as the parameter value. The <code class="xref py py-class docutils literal notranslate"><span class="pre">AllParameters</span></code>
+class supports additional string argument specifying the path
+to the configuration. We show the usage in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">aclick</span><span class="o">.</span><span class="n">AllParameters</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">json</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>We get the following output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model-num-features 3
+{&quot;num_epochs&quot;: 1, &quot;model&quot;: {&quot;learning_rate&quot;: 0.0001, &quot;num_features&quot;: 3}}
+</pre></div>
+</div>
+<p>We can also specify the config path as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">aclick</span><span class="o">.</span><span class="n">AllParameters</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">],</span> <span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">json</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>With the following output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model-num-features 3
+{&quot;learning_rate&quot;: 0.0001, &quot;num_features&quot;: 3}
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">Advanced features</a><ul>
+<li><a class="reference internal" href="#getting-values-of-all-parameters">Getting values of all parameters</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hierarchical-parsing.html">Hierarchical parsing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline-types.html">Inline types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter-renaming.html">Parameter renaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="loading-configuration.html">Loading configuration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Advanced features</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>

@@ -1,0 +1,292 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hierarchical parsing &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Inline types" href="inline-types.html" />
+    <link rel="prev" title="Getting started" href="basic.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="inline-types.html" title="Inline types"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="basic.html" title="Getting started"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Hierarchical parsing</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="hierarchical-parsing">
+<h1>Hierarchical parsing<a class="headerlink" href="#hierarchical-parsing" title="Permalink to this headline">¶</a></h1>
+<p>Hierarchical parsing allows complex class types to be expaded into individual parameters.
+For each property of a class type a parameter is generated with name being the path to the
+parameter. This is illustrated in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&#39;&#39;lr: </span><span class="si">{</span><span class="n">learning_rate</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_features: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">num_features</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_epochs: </span><span class="si">{</span><span class="n">num_epochs</span><span class="si">}</span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.0001]
+  --model-num-features INTEGER  Number of features  [default: 5]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+<p>Note, that in some cases hierarchical parsing may not support your type,
+default value, etc. In particular, positional arguments cannot be expanded
+in hierarchical parsing. If your type in not supported, you can either inline
+it by wrapping it with <code class="xref py py-func docutils literal notranslate"><span class="pre">aclick.default_from_str()</span></code> wrapper or turn of hierarchical
+parsing by passing <code class="docutils literal notranslate"><span class="pre">hierarchical</span> <span class="pre">=</span> <span class="pre">False</span></code> to the command constructor.</p>
+<p>With a deep class structure the parameter names can grow long. Parameters
+can be renamed to prevent long names. For more information see <a class="reference internal" href="#"><span class="doc">hierarchical parsing</span></a> and <code class="xref py py-class docutils literal notranslate"><span class="pre">FlattenParameterRenamer</span></code>.</p>
+<section id="custom-classes">
+<h2>Custom classes<a class="headerlink" href="#custom-classes" title="Permalink to this headline">¶</a></h2>
+<p>User defined classes are naturally expand to individual parameters if <code class="docutils literal notranslate"><span class="pre">hierarchical</span> <span class="pre">=</span> <span class="pre">True</span></code> (default).
+We can have a class hierarchy and parameters will be expanded to the lowest level. This
+can be seen in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Schedule</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">constant</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">constant</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="n">Schedule</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                          Show this message and exit.
+  --model-learning-rate-type TEXT
+                                  [required]
+  --model-learning-rate-constant FLOAT
+                                  [default: 0.0001]
+  --model-num-features INTEGER    Number of features  [default: 5]
+  --num-epochs INTEGER            [required]
+</pre></div>
+</div>
+</section>
+<section id="optional-values">
+<h2>Optional values<a class="headerlink" href="#optional-values" title="Permalink to this headline">¶</a></h2>
+<p>If a property of a class type is optional, there will be a boolean
+flag with the property name indicating whether the class is actually present.
+This is illustrated in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Schedule</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">constant</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant</span> <span class="o">=</span> <span class="n">constant</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">Schedule</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                        Show this message and exit.
+  --model-learning-rate         Set model.learning_rate to a schedule instance
+  --model-num-features INTEGER  Number of features  [default: 5]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+<p>And after specifying that we want to instantiate the <code class="docutils literal notranslate"><span class="pre">learning_rate</span></code> instance:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model-learning-rate --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                          Show this message and exit.
+  --model-learning-rate           Set model.learning_rate to a schedule instance
+  --model-learning-rate-type TEXT
+                                  [required]
+  --model-learning-rate-constant FLOAT
+                                  [default: 0.0001]
+  --model-num-features INTEGER    Number of features  [default: 5]
+  --num-epochs INTEGER            [required]
+</pre></div>
+</div>
+</section>
+<section id="union-of-classes">
+<h2>Union of classes<a class="headerlink" href="#union-of-classes" title="Permalink to this headline">¶</a></h2>
+<p>We can also specify multiple types for a parameter or property and
+the concrete type will be specified when invoking the command.
+This scenario is illustrated in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ModelA</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ModelB</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_layers: Number of layers</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="n">num_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">ModelA</span><span class="p">,</span> <span class="n">ModelB</span><span class="p">],</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>The corresponding help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                     Show this message and exit.
+  --model [model-a|model-b]  Set model to a type instance  [required]
+  --num-epochs INTEGER       [required]
+</pre></div>
+</div>
+<p>And after specifying that we want to use <code class="docutils literal notranslate"><span class="pre">ModelB</span></code> class:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --model model-b --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --help                       Show this message and exit.
+  --model [model-a|model-b]    Set model to a type instance  [required]
+  --model-learning-rate FLOAT  Learning rate  [default: 0.2]
+  --model-num-layers INTEGER   Number of layers  [default: 10]
+  --num-epochs INTEGER         [required]
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">Hierarchical parsing</a><ul>
+<li><a class="reference internal" href="#custom-classes">Custom classes</a></li>
+<li><a class="reference internal" href="#optional-values">Optional values</a></li>
+<li><a class="reference internal" href="#union-of-classes">Union of classes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Hierarchical parsing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline-types.html">Inline types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter-renaming.html">Parameter renaming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="loading-configuration.html">Loading configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced features</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>

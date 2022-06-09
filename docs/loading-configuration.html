@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Loading configuration &#8212; aclick 0.2.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/flask.css" />
+    <link rel="stylesheet" type="text/css" href="_static/run_code.css" />
+    <link rel="stylesheet" type="text/css" href="_static/tabs.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Advanced features" href="advanced.html" />
+    <link rel="prev" title="Parameter renaming" href="parameter-renaming.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advanced.html" title="Advanced features"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="parameter-renaming.html" title="Parameter renaming"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">aclick 0.2.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Loading configuration</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="loading-configuration">
+<h1>Loading configuration<a class="headerlink" href="#loading-configuration" title="Permalink to this headline">¶</a></h1>
+<p>With <cite>aclick</cite> you can load a configuration file containing default values for all parameters.
+This can be especially useful if you want to save the parameters and load them later. In order
+to enable this feature, there is the <code class="xref py py-func docutils literal notranslate"><span class="pre">configuration_option()</span></code> decorator. This decorator
+adds a new parameter called <cite>–configuration</cite> (althought the name can be customized) which
+reads a configuration file before the actual parsing happens and sets all default values and
+types based on this configuration.</p>
+<p>By default the <code class="xref py py-func docutils literal notranslate"><span class="pre">configuration_option()</span></code> loads one of the registered configuration provider
+based on the filename of the config file and parses the file using the configuration provider.
+The following configuration providers are supported in the default <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_configuration()</span></code>
+function:</p>
+<ul class="simple">
+<li><p><cite>*.json</cite>: a JSON parser is used</p></li>
+<li><p><cite>*.yml|*.yaml</cite>: a YAML parser is used</p></li>
+<li><p><cite>*.gin</cite>: the file is parsed using the <cite>gin-config</cite> library. In this case, all used classes have to be decorated with <cite>&#64;gin.configurable</cite>.</p></li>
+</ul>
+<p>A custom configuration parser can also be registered using the <code class="xref py py-func docutils literal notranslate"><span class="pre">register_configuration_parser()</span></code>
+function which takes a regex matching the supported filenames and a parse function as its arguments.
+Alternatively, the <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_configuration()</span></code> function can be overrided in the <code class="xref py py-func docutils literal notranslate"><span class="pre">configuration_option()</span></code>
+decorator.</p>
+<section id="json-and-yaml">
+<h2>JSON and YAML<a class="headerlink" href="#json-and-yaml" title="Permalink to this headline">¶</a></h2>
+<p>JSON and YAML files are supported in the default <code class="xref py py-func docutils literal notranslate"><span class="pre">parse_configuration()</span></code> function.
+We show this feature for a JSON configuration file in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">configuration_option</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&#39;&#39;lr: </span><span class="si">{</span><span class="n">learning_rate</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_features: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">num_features</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_epochs: </span><span class="si">{</span><span class="n">num_epochs</span><span class="si">}</span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We have the following help page:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --config TEXT                 Load configuration from a file.
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.0001]
+  --model-num-features INTEGER  Number of features  [default: 5]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+<p>Now, we create a file <cite>config.json</cite> with the following content:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>{
+    &quot;num_epochs&quot;: 3,
+    &quot;model&quot;: {
+        &quot;num_features&quot;: 4
+    }
+}
+</pre></div>
+</div>
+<p>If we pass our configuration file, the help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --config config.json --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --config TEXT                 Load configuration from a file.
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.0001]
+  --model-num-features INTEGER  Number of features  [default: 4]
+  --num-epochs INTEGER          [default: 3]
+</pre></div>
+</div>
+</section>
+<section id="gin">
+<h2>Gin<a class="headerlink" href="#gin" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference external" href="https://github.com/google/gin-config">gin-config library</a> can be used to configure the parameters.
+In this case, the library must be installed and the <cite>.gin</cite> configuration file must be compatible with
+the classes and functions, e.g., all required classes must be decorated with <cite>&#64;gin.configurable</cite>.
+We show the parsing of a gin-config configuration file in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@gin</span><span class="o">.</span><span class="n">configurable</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    :param learning_rate: Learning rate</span>
+<span class="sd">    :param num_features: Number of features</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">learning_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span>
+    <span class="n">num_features</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">configuration_option</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">)</span>
+<span class="nd">@gin</span><span class="o">.</span><span class="n">configurable</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&#39;&#39;lr: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">learning_rate</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_features: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">num_features</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_epochs: </span><span class="si">{</span><span class="n">num_epochs</span><span class="si">}</span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now, we create a file <cite>config.gin</cite> with the following content:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Model.learning_rate = 0.1
+Model.num_features = 4
+train.model = @Model()
+train.num_epochs = 1
+</pre></div>
+</div>
+<p>If we pass our configuration file, the help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --config config.gin --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --config TEXT                 Load configuration from a file.
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.1]
+  --model-num-features INTEGER  Number of features  [default: 4]
+  --num-epochs INTEGER          [default: 1]
+</pre></div>
+</div>
+</section>
+<section id="restricting-configuration-to-a-custom-parameter">
+<h2>Restricting configuration to a custom parameter<a class="headerlink" href="#restricting-configuration-to-a-custom-parameter" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you want to restrict the configuration to a single parameter.
+In AClick, this can easily be achieved using the <code class="xref py py-func docutils literal notranslate"><span class="pre">restrict_parse_configuration()</span></code>
+function. This function takes as its first parameter the path to the parameter
+for which we will parse the configuration. The (optional) second parameter
+is the function that will be used to parse the configuration.</p>
+<p>We show this feature in the following example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@aclick</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@aclick</span><span class="o">.</span><span class="n">configuration_option</span><span class="p">(</span>
+    <span class="s1">&#39;--config&#39;</span><span class="p">,</span>
+    <span class="n">parse_configuration</span><span class="o">=</span><span class="n">aclick</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">restrict_parse_configuration</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&#39;&#39;lr: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">learning_rate</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_features: </span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">num_features</span><span class="si">}</span><span class="s1">,</span>
+<span class="s1">num_epochs: </span><span class="si">{</span><span class="n">num_epochs</span><span class="si">}</span><span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now, we create a file <cite>config.json</cite> with the following content:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>{
+    &quot;num_features&quot;: 4
+}
+</pre></div>
+</div>
+<p>If we pass our configuration file, the help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --config config.json --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --config TEXT                 Load configuration from a file.
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.0001]
+  --model-num-features INTEGER  Number of features  [default: 4]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+</section>
+<section id="custom-configuration-provider">
+<h2>Custom configuration provider<a class="headerlink" href="#custom-configuration-provider" title="Permalink to this headline">¶</a></h2>
+<p>A custom configuration provider can be registered using the <code class="xref py py-func docutils literal notranslate"><span class="pre">register_configuration_provider()</span></code> decorator.
+We demonstrate this in a simple TXT configuration provider.
+First, we create a file <cite>config.txt</cite> with the following content:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>model.num_features=4
+num_epochs=3
+</pre></div>
+</div>
+<p>We then register our configuration provider:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@aclick</span><span class="o">.</span><span class="n">register_configuration_provider</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;.*\.txt&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">parse_txt_configuration</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fp</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+        <span class="n">local_cfg</span> <span class="o">=</span> <span class="n">cfg</span>
+        <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">path</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">local_cfg</span><span class="p">[</span><span class="n">part</span><span class="p">]</span> <span class="o">=</span> <span class="n">local_cfg</span><span class="p">[</span><span class="n">part</span><span class="p">]</span> <span class="k">if</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">local_cfg</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="n">local_cfg</span> <span class="o">=</span> <span class="n">local_cfg</span><span class="p">[</span><span class="n">part</span><span class="p">]</span>
+        <span class="n">local_cfg</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cfg</span>
+</pre></div>
+</div>
+<p>If we pass our configuration file, the help page looks as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ python train.py --config config.txt --help
+Usage: train.py [OPTIONS]
+
+Options:
+  --config TEXT                 Load configuration from a file.
+  --help                        Show this message and exit.
+  --model-learning-rate FLOAT   Learning rate  [default: 0.0001]
+  --model-num-features INTEGER  Number of features  [default: 5]
+  --num-epochs INTEGER          [required]
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+  <span id="sidebar-top"></span>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  
+    
+  
+
+  <h3>Contents</h3>
+  <ul>
+<li><a class="reference internal" href="#">Loading configuration</a><ul>
+<li><a class="reference internal" href="#json-and-yaml">JSON and YAML</a></li>
+<li><a class="reference internal" href="#gin">Gin</a></li>
+<li><a class="reference internal" href="#restricting-configuration-to-a-custom-parameter">Restricting configuration to a custom parameter</a></li>
+<li><a class="reference internal" href="#custom-configuration-provider">Custom configuration provider</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>Documentation</h3>
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hierarchical-parsing.html">Hierarchical parsing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inline-types.html">Inline types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameter-renaming.html">Parameter renaming</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Loading configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced.html">Advanced features</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Jonáš Kulhánek.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.5.0.
+    </div>
+  <script src="_static/version_warning_offset.js"></script>
+
+  </body>
+</html>
