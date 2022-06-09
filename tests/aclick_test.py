@@ -1,3 +1,4 @@
+import dataclasses
 import inspect
 import traceback
 import typing as t
@@ -446,3 +447,36 @@ def test_click_all_parameters_with_path_union_of_dataclasses(monkeypatch):
         assert config == dict(test="ok", __class__="d2", test2=4)
 
     test_union_of_dataclasses2(monkeypatch)
+
+
+def test_dataclass_with_factory(monkeypatch):
+    @aclick.utils.default_from_str()
+    @dataclass
+    class C:
+        c: str
+
+    @dataclass
+    class C2:
+        c: str
+
+    @dataclass
+    class D:
+        c: C = dataclasses.field(default_factory=lambda: C("ok"))
+        c1: C = dataclasses.field(default=C("ok"))
+        # c2: C2 = dataclasses.field(default_factory=lambda: C2('ok'))
+        # c3: C2 = dataclasses.field(default=C2('ok'))
+
+    def main(d: D):
+        assert isinstance(d, D)
+        assert isinstance(d.c, C)
+        assert isinstance(d.c1, C)
+        assert d.c.c == "ok"
+        assert d.c1.c == "ok"
+
+    click_test()(main)(monkeypatch)
+
+    def main_err(err, d: D):
+        status, msg = err
+        assert status == 0
+
+    click_test_error("--help", hierarchical=False)(main_err)(monkeypatch)

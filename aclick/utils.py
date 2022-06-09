@@ -1045,6 +1045,23 @@ def _full_signature(fn: t.Callable) -> SignatureWithDescription:
         signature = _merge_signatures(
             *[signature_with_description(x) for x in fn.__mro__]
         )
+
+        # Fix wrong defaults for a dataclass
+        if dataclasses.is_dataclass(fn) and any(
+            p.default is dataclasses._HAS_DEFAULT_FACTORY
+            for p in signature.parameters.values()
+        ):
+            new_parameters = []
+            fields = {x.name: x for x in dataclasses.fields(fn)}
+            for p in signature.parameters.values():
+                if p.default is dataclasses._HAS_DEFAULT_FACTORY:
+                    # Fix type
+                    new_parameters.append(
+                        p.replace(default=fields[p.name].default_factory())
+                    )
+                    continue
+                new_parameters.append(p)
+            signature = signature.replace(parameters=new_parameters)
     else:
         signature = signature_with_description(fn)
     return signature

@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 import inspect
 import itertools
 import random
@@ -90,6 +91,18 @@ class B:
         return isinstance(other, B) and self.b == other.b
 
 
+@aclick.utils.default_from_str
+@dataclass
+class D:
+    d: str
+
+
+@dataclass
+class C:
+
+    c: D = dataclasses.field(default_factory=lambda: D("ok"))
+
+
 @pytest.mark.parametrize(
     "tp",
     [
@@ -111,6 +124,8 @@ class B:
         t.Optional[t.Tuple[A]],
         t.Optional[t.Dict[str, A]],
         t.Optional[t.OrderedDict[str, A]],
+        C,
+        D,
     ],
 )
 def test_type(tp):
