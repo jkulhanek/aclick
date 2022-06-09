@@ -315,7 +315,14 @@ class Command(_click.Command):
 
         kwargs = dict()
         if param.default is not inspect._empty:
-            kwargs["default"] = param.default
+            default = param.default
+            if callable(default):
+                # Fix for click
+                old_default = default
+                default = lambda: old_default
+                setattr(default, "__str__", old_default.__str__)
+
+            kwargs["default"] = default
             kwargs["required"] = False
             if not is_argument and self.show_defaults is not None:
                 kwargs["show_default"] = self.show_defaults

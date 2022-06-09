@@ -480,3 +480,31 @@ def test_dataclass_with_factory(monkeypatch):
         assert status == 0
 
     click_test_error("--help", hierarchical=False)(main_err)(monkeypatch)
+
+
+def test_callable_default(monkeypatch):
+    class C:
+        def __call__(self):
+            raise Exception("Should not be called")
+
+    @click_test(hierarchical=False)
+    def main(c: C = C()):
+        pass
+
+    main(monkeypatch)
+
+
+def test_from_str_used(monkeypatch):
+    @dataclass
+    class C:
+        c: str
+
+        @staticmethod
+        def from_str(val):
+            return C(val)
+
+    def main(c: C):
+        assert isinstance(c, C)
+        assert c.c == "ok"
+
+    click_test("--c", "ok", hierarchical=False)(main)(monkeypatch)

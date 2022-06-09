@@ -239,7 +239,16 @@ class ClassUnion(_click.ParamType):
             else DEFAULT_USE_DASHES
         )
         try:
-            value = parse_class_structure(value, self.classes, self.known_classes)
+            classes_from_str = (c for c in self.classes if hasattr(c, "from_str"))
+            for c in classes_from_str:
+                try:
+                    value = c.from_str(value)
+                    break
+                except ValueError:
+                    pass
+            else:
+                classes = list(c for c in self.classes if not hasattr(c, "from_str"))
+                value = parse_class_structure(value, classes, self.known_classes)
         except ParseClassStructureError as err:
             msg = str(err)
             if self.num_examples_on_error != 0:

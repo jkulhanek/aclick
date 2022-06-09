@@ -282,7 +282,7 @@ class D6:
         return self.test
 
 
-@click_test("--a", 'd6("passed")', hierarchical=True)
+@click_test("--a", "passed", hierarchical=True)
 def test_hierarchical_parsing_disabled_for_from_str_classes(a: D6):
     assert isinstance(a, D6)
     assert a.test == "passed"
